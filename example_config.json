@@ -1,0 +1,16 @@
+{
+	"model": {
+		"input_size": [75,75]
+	},
+
+	"train": {
+		"batch_size": 32,
+		"good_classes": "GOOD_CLASSES/",
+		"bad_classes": "BAD_CLASSES/",
+		"pretrained_weights": "gmodel_phosnet_20190516.h5",
+		"saved_weights_name": "my_model.h5",
+		"learning_rate": 1e-4,
+		"nb_epoch": 50,
+		"nb_early_stop": 5
+	}
+}
