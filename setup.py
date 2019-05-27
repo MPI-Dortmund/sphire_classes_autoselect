@@ -27,7 +27,6 @@ setup(
     license='MIT',
     author='Thorsten Wagner',
     install_requires=[
-        "mrcfile >= 1.0.0",
         "Keras >= 2.2.4",
         "numpy <= 1.14.5",
         "h5py >= 2.5.0",
