@@ -1,36 +1,7 @@
-"""
-
-The labeled data is organized in the following manner.
-
-Your program gets two folders:
-    1. GOOD_CLASSES
-    2. BAD_CLASSES
-
-Each folder can contain multiple hdf files in subfolders. Each hdf file contains multiple images (classes).
-HDF 0: CLASS 1, CLASS 2, CLASS 3, ..., CLASS N_0
-HDF 1: CLASS 1, CLASS 2, CLASS 3, ..., CLASS N_1
-...
-HDF K: CLASS 1, CLASS 2, CLASS 3, ..., CLASS N_K
-
-You first have to divide your data into training and validation data.
-Therefore I would organize the data as a list of tubles (HDF_PATH,CLASS_INDEX,LABEL):
-
-labled_data_shuffled = [(HDF_PATH_0,1,LABEL_0),(HDF_PATH_0,2,LABEL_0),(HDF_PATH_0,3,LABEL_0),...,(HDF_PATH_0,N_0,LABEL_0),
-                        (HDF_PATH_1,1,LABEL_1),(HDF_PATH_1,2,LABEL_1),(HDF_PATH_1,3,LABEL_1),...(HDF_PATH_1,N_1,LABEL_1),...,
-                        (HDF_PATH_K,N_0,LABEL_K),(HDF_PATH_K,1,LABEL_K),(HDF_PATH_K,2,LABEL_K),(HDF_PATH_K,3,LABEL_K),...(HDF_PATH_K,N_1,LABEL_K)]
-You can then shuffle this list and select randomly 20% as validation data and 80% as training data.
-
-
-Finally you have 3 lists:
-train_data = 80% of labeled_data_shuffled
-valid_data = 20% of labeled_data_shuffled
-
-A generator is used to provide the data for training/
-
-
-"""
 
 import os
+import multiprocessing
+import time
 from keras.utils import Sequence
 from keras.layers import (
     Conv2D,
@@ -47,9 +18,9 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-import multiprocessing
+
 import numpy as np
-import time
+
 from .helper import (
     getImages_fromList_key,
     resize_img,
@@ -325,7 +296,7 @@ class Auto2DSelectNet(object):
         feature_extractor = Model(input_image, x)
 
         x = GlobalAveragePooling2D()(feature_extractor(input_image))
-        # output = Flatten()(x)
+
         output = Dense(64, activation="relu", name="denseL1")(x)
         output = Dense(10, activation="relu", name="denseL2")(output)
         output = Dense(1, activation="sigmoid", name="denseL3")(output)
@@ -351,7 +322,7 @@ class Auto2DSelectNet(object):
     def train(
         self, good_path, bad_path, save_weights_name, pretrained_weights=None, seed=10
     ):
-        np.random.seed(10)
+        np.random.seed(seed)
 
         if os.path.exists(pretrained_weights):
             print("Load pretrained weights", pretrained_weights)
