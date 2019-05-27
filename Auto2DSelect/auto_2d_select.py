@@ -1,4 +1,29 @@
+'''
+Automatic 2D class selection tool.
 
+MIT License
+
+Copyright (c) 2019 Max Planck Institute of Molecular Physiology
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+'''
 import os
 import multiprocessing
 import time
@@ -114,11 +139,21 @@ class BatchGenerator(Sequence):
 
 class Auto2DSelectNet(object):
     def __init__(self, batch_size, input_size):
+        '''
+
+        :param batch_size: Batch size for training / prediction
+        :param input_size: Input image size
+        '''
         self.batch_size = batch_size
         self.input_size = input_size
         self.model = self.build_phosnet_model(self.input_size)
 
     def build_phosnet_model(self, input_size):
+        '''
+
+        :param input_size: Image input size
+        :return: A keras model
+        '''
         input_image = Input(shape=(input_size[0], input_size[1], 1))
 
         # name of first layer
@@ -322,6 +357,16 @@ class Auto2DSelectNet(object):
     def train(
         self, good_path, bad_path, save_weights_name, pretrained_weights=None, seed=10
     ):
+        """
+        Train the network on 2D classes.
+
+        :param good_path: Path to folder with good classes
+        :param bad_path: Path to folder with bad classes
+        :param save_weights_name: Filename of the modle file
+        :param pretrained_weights: Filepath to pretrained weights
+        :param seed: Seed for random number selection
+        :return: None
+        """
         np.random.seed(seed)
 
         if os.path.exists(pretrained_weights):
@@ -378,6 +423,14 @@ class Auto2DSelectNet(object):
         )
 
     def predict(self, input_path, model_path, good_thresh=0.5):
+        """
+        Runs a trained model on a .hdf file containing 2D classes.
+
+        :param input_path: Path to input hdf file
+        :param model_path: Path to .h5 weights file.
+        :param good_thresh: Threshold for selecting good classes
+        :return: Return a list of tuples with the format (input_path, index_in_hdf, label, confidence)
+        """
         self.model.load_weights(model_path)
         img_list = get_list_images(input_path)
         results = []
