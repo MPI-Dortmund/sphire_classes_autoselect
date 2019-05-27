@@ -23,7 +23,7 @@ setup(
     version=find_version("Auto2DSelect", "__init__.py"),
     python_requires='>3.4.0',
     packages=['Auto2DSelect'],
-    url='',
+    url='https://github.com/MPI-Dortmund/sphire_classes_autoselect',
     license='MIT',
     author='Thorsten Wagner',
     install_requires=[
