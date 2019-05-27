@@ -59,8 +59,9 @@ def getList_hdf_files(path_to_files):
     :param path_to_files: list of all the files present in the folder (and subfolder)given from the user
     :return: list of valid hdf
     """
-    return [ path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file)]
-
+    return [
+        path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file)
+    ]
 
 
 """ FUNCTION TO READ THE HDF"""

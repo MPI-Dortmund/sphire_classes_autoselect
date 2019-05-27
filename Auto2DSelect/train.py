@@ -18,11 +18,10 @@ ARGPARSER = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
 )
 
-ARGPARSER.add_argument(
-    "-c", "--config", required=True, help="Path to config file."
-)
+ARGPARSER.add_argument("-c", "--config", required=True, help="Path to config file.")
 
 ARGPARSER.add_argument("--gpu", default=-1, type=int, help="GPU to run on.")
+
 
 def _main_():
     args = ARGPARSER.parse_args()
@@ -31,13 +30,13 @@ def _main_():
         str_gpu = str(args.gpu)
         os.environ["CUDA_VISIBLE_DEVICES"] = str_gpu
 
-
     with open(args.config) as config_buffer:
         try:
             config = json.load(config_buffer)
         except json.JSONDecodeError:
-            print("Your configuration file seems to be corruped. Please check if it is valid.")
-
+            print(
+                "Your configuration file seems to be corruped. Please check if it is valid."
+            )
 
     input_size = config["model"]["input_size"]
     batch_size = config["train"]["batch_size"]
@@ -47,7 +46,12 @@ def _main_():
     output_file = config["train"]["saved_weights_name"]
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
 
-    auto2dnet.train(good_path, bad_path, save_weights_name=output_file, pretrained_weights=pretrained_weights)
+    auto2dnet.train(
+        good_path,
+        bad_path,
+        save_weights_name=output_file,
+        pretrained_weights=pretrained_weights,
+    )
 
 
 if __name__ == "__main__":

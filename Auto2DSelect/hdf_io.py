@@ -5,7 +5,8 @@ import h5py
 import numpy as np
 import os
 
-def write_labeled_hdf(results,output_path,filename):
+
+def write_labeled_hdf(results, output_path, filename):
     """
     The code will generate 2 files with 'output_path' name and suffix '_good' where it'll storage the good results
                             and '_bad' to storage the bad results
@@ -13,6 +14,7 @@ def write_labeled_hdf(results,output_path,filename):
     :param output_path: Path where the results should be written.
     :return: None
     """
+
     def write_hdf(original_path, out_path, l):
         """
         It copies the image from the original file to the result files.
@@ -22,24 +24,34 @@ def write_labeled_hdf(results,output_path,filename):
         :return: None
         """
         counter = 0
-        with h5py.File(original_path, driver='core') as original:
-            with h5py.File(out_path, 'w') as f:
+        with h5py.File(original_path, driver="core") as original:
+            with h5py.File(out_path, "w") as f:
                 group = f.create_group("MDF/images/")
 
-                group.attrs["imageid_max"] = np.array([len(l)-1], dtype=np.int32)
+                group.attrs["imageid_max"] = np.array([len(l) - 1], dtype=np.int32)
 
                 for original_index in l:
-                    subgroup = f.create_group("MDF/images/" + str(counter ) + "/")
-                    subgroup.create_dataset("image", data=original['MDF']['images'][str(original_index)]['image'][()])
-                    for k, v in original['MDF']['images'][str(original_index )].attrs.items():
-                        subgroup .attrs[k]=v
-                    counter +=1
+                    subgroup = f.create_group("MDF/images/" + str(counter) + "/")
+                    subgroup.create_dataset(
+                        "image",
+                        data=original["MDF"]["images"][str(original_index)]["image"][
+                            ()
+                        ],
+                    )
+                    for k, v in original["MDF"]["images"][
+                        str(original_index)
+                    ].attrs.items():
+                        subgroup.attrs[k] = v
+                    counter += 1
 
     # the given results belong at one starting file
     path_original = results[0][0]
     good_index = [result[1] for result in results if result[2] == 1]
     bad_index = [result[1] for result in results if result[2] == 0]
 
-
-    write_hdf(path_original, os.path.join(output_path, filename+"_good.hdf"), good_index)
-    write_hdf(path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index)
+    write_hdf(
+        path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
+    )
+    write_hdf(
+        path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
+    )

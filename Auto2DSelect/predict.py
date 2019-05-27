@@ -25,13 +25,18 @@ ARGPARSER.add_argument("-o", "--output", required=True, help="Path to output fol
 
 ARGPARSER.add_argument("-w", "--weights", required=True, help="Path network weights.")
 
-ARGPARSER.add_argument("-t", "--confidence_threshold", default=0.5, type=float, help="Classes with a confidence higher as that threshold are classified as good.")
+ARGPARSER.add_argument(
+    "-t",
+    "--confidence_threshold",
+    default=0.5,
+    type=float,
+    help="Classes with a confidence higher as that threshold are classified as good.",
+)
 
 ARGPARSER.add_argument("--gpu", default=-1, type=int, help="GPU to run on.")
 
-ARGPARSER.add_argument(
-    "-c", "--config", required=True, help="Path to config file."
-)
+ARGPARSER.add_argument("-c", "--config", required=True, help="Path to config file.")
+
 
 def _main_():
     args = ARGPARSER.parse_args()
@@ -53,8 +58,9 @@ def _main_():
         try:
             config = json.load(config_buffer)
         except json.JSONDecodeError:
-            print("Your configuration file seems to be corruped. Please check if it is valid.")
-
+            print(
+                "Your configuration file seems to be corruped. Please check if it is valid."
+            )
 
     input_size = config["model"]["input_size"]
     batch_size = config["train"]["batch_size"]
@@ -62,7 +68,9 @@ def _main_():
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
     result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold)
 
-    hdf_io.write_labeled_hdf(result, output_path,os.path.basename(input_path).split('.')[0])
+    hdf_io.write_labeled_hdf(
+        result, output_path, os.path.basename(input_path).split(".")[0]
+    )
     good = []
     bad = []
     for res in result:
@@ -72,8 +80,8 @@ def _main_():
             bad.append(res[1])
     good.sort()
     bad.sort()
-    print("\n Good classes (",len(good),")", good, "\n")
-    print("\n Bad classes (",len(bad),")", bad,"\n")
+    print("\n Good classes (", len(good), ")", good, "\n")
+    print("\n Bad classes (", len(bad), ")", bad, "\n")
 
 
 if __name__ == "__main__":

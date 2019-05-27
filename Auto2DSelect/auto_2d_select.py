@@ -334,7 +334,6 @@ class Auto2DSelectNet(object):
         model.summary()
         return model
 
-
     def get_data_tubles(self, good_path, bad_path):
         """
         :param good_path: Path to the folder with good classes
@@ -349,12 +348,14 @@ class Auto2DSelectNet(object):
             list_bad += [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
         return list_good + list_bad
 
-    def train(self, good_path, bad_path, save_weights_name, pretrained_weights=None, seed=10):
+    def train(
+        self, good_path, bad_path, save_weights_name, pretrained_weights=None, seed=10
+    ):
         np.random.seed(10)
 
         if os.path.exists(pretrained_weights):
             print("Load pretrained weights", pretrained_weights)
-            self.model.load_weights(pretrained_weights,by_name=True)
+            self.model.load_weights(pretrained_weights, by_name=True)
 
         labeled_data = self.get_data_tubles(good_path, bad_path)
         train_valid_split = int(0.8 * len(labeled_data))
@@ -392,7 +393,9 @@ class Auto2DSelectNet(object):
         optimizer = Adam(
             lr=10 ** -4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
-        self.model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=['accuracy'])
+        self.model.compile(
+            optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
+        )
         self.model.fit_generator(
             generator=train_generator,
             validation_data=valid_generator,
@@ -420,7 +423,7 @@ class Auto2DSelectNet(object):
             arr_img = np.expand_dims(arr_img, 3)
 
             pred_res = self.model.predict(arr_img)
-            result = pred_res[:,0]
+            result = pred_res[:, 0]
             results.append(result)
 
         result = np.concatenate(tuple(results))
