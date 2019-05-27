@@ -39,6 +39,11 @@ def _main_():
     weights_path = args.weights
     output_path = args.output
     threshold = args.confidence_threshold
+    if os.path.exists(output_path):
+        print("Output path already exists. Stop")
+        exit(0)
+    else:
+        os.makedirs(output_path)
 
     if args.gpu != -1:
         str_gpu = str(args.gpu)

@@ -392,7 +392,7 @@ class Auto2DSelectNet(object):
         optimizer = Adam(
             lr=10 ** -4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
-        self.model.compile(optimizer=optimizer, loss="binary_crossentropy")
+        self.model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=['accuracy'])
         self.model.fit_generator(
             generator=train_generator,
             validation_data=valid_generator,
