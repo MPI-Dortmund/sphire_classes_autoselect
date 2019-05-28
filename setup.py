@@ -19,7 +19,7 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 setup(
-    name='auto2dclassselect',
+    name='cinderella',
     version=find_version("Auto2DSelect", "__init__.py"),
     python_requires='>3.4.0',
     packages=['Auto2DSelect'],
