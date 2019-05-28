@@ -29,6 +29,7 @@ from os import path, listdir
 import h5py
 from PIL import Image  # install it via pip install pillow
 import numpy
+import mrcfile
 
 """
 The format of the .hf file is the following:
@@ -80,14 +81,14 @@ def getList_files(paths):
     return list_new_paths
 
 
-def getList_hdf_files(path_to_files):
+def getList_relevant_files(path_to_files):
     """
-    Check if the given files are hdf with a valid format. Return The list of valid hdf
+    Check if the given files are hdf/mrcs with a valid format. Return The list of valid hdf
     :param path_to_files: list of all the files present in the folder (and subfolder)given from the user
     :return: list of valid hdf
     """
     return [
-        path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file)
+        path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file) or path_to_file[-4:]=='mrcs' or path_to_file[-3:]=='mrc'
     ]
 
 
@@ -102,16 +103,30 @@ def get_list_images(path_to_file):
     """
     print("Try to list images on", path_to_file)
     if path.isfile(path_to_file):
-        try:
-            with h5py.File(path_to_file, "r") as f:
-                data = [int(v) for v in list(f["MDF"]["images"])]
-            return data
-        except:
-            print(
-                "WARNING in get_list_images: the file '"
-                + path_to_file
-                + " is not an HDF file with the following format:\n\t['MDF']['images']. It will be ignored"
-            )
+        if path.basename(path_to_file).split(".")[1]=='hdf':
+            try:
+                with h5py.File(path_to_file, "r") as f:
+                    data = [int(v) for v in list(f["MDF"]["images"])]
+                return data
+            except:
+                print(
+                    "WARNING in get_list_images: the file '"
+                    + path_to_file
+                    + " is not an HDF file with the following format:\n\t['MDF']['images']. It will be ignored"
+                )
+        elif path.basename(path_to_file).split(".")[1] in ['mrcs', 'mrc']:
+            try:
+                with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
+                    data = list(range(len(mrc.data)))
+                return data
+            except Exception as e:
+                print(e)
+                print(
+                    "WARNING in get_list_images: the file '"
+                    + path_to_file
+                    + " is not an valid mrc file. It will be ignored"
+                )
+
 
 
 def getImages_fromList_key(path_to_file, list_images):
@@ -123,33 +138,41 @@ def getImages_fromList_key(path_to_file, list_images):
     """
     data = list()
     if path.isfile(path_to_file):
-        try:
-            with h5py.File(path_to_file, driver="core") as f:
+        if path.basename(path_to_file).split('.')[1] == "hdf":
+            try:
+                with h5py.File(path_to_file, driver="core") as f:
+                    if isinstance(list_images, list) or isinstance(list_images, tuple):
+                        data = [
+                            f["MDF"]["images"][str(i)]["image"][()] for i in list_images
+                        ]  # [()] is used instead of .value
+                    elif isinstance(list_images, int):
+                        data = f["MDF"]["images"][str(list_images)]["image"][()]
+                    else:
+                        print(
+                            "\nERROR in getImages_fromList_key: invalid list_images, it should be a string or a list/tuple of strings:",
+                            type(list_images),
+                        )
+                        print("you try to get the following images")
+                        print(list_images)
+                        exit()
+            except Exception as e:
+                print(e)
+                print(
+                    "\nERROR in getImages_fromList_key: the file '"
+                    + path_to_file
+                    + " is not an HDF file with the following format:\n\t['MDF']['images']['0']['image']"
+                )
+                print("you try to get the following images")
+                print(list_images)
+                print("there are " + str(len(f["MDF"]["images"])))
+                exit()
+        elif path.basename(path_to_file).split('.')[1] in ["mrc","mrcs"]:
+            data = []
+            with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
                 if isinstance(list_images, list) or isinstance(list_images, tuple):
-                    data = [
-                        f["MDF"]["images"][str(i)]["image"][()] for i in list_images
-                    ]  # [()] is used instead of .value
+                    data = [mrc.data[i] for i in list_images]
                 elif isinstance(list_images, int):
-                    data = f["MDF"]["images"][str(list_images)]["image"][()]
-                else:
-                    print(
-                        "\nERROR in getImages_fromList_key: invalid list_images, it should be a string or a list/tuple of strings:",
-                        type(list_images),
-                    )
-                    print("you try to get the following images")
-                    print(list_images)
-                    exit()
-        except Exception as e:
-            print(e)
-            print(
-                "\nERROR in getImages_fromList_key: the file '"
-                + path_to_file
-                + " is not an HDF file with the following format:\n\t['MDF']['images']['0']['image']"
-            )
-            print("you try to get the following images")
-            print(list_images)
-            print("there are " + str(len(f["MDF"]["images"])))
-            exit()
+                    data = [mrc.data[list_images]]
     return data
 
 

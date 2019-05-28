@@ -29,7 +29,7 @@ import json
 import multiprocessing
 import argparse
 from .auto_2d_select import Auto2DSelectNet
-from . import hdf_io
+from . import results_writer
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -94,9 +94,11 @@ def _main_():
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
     result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold)
 
-    hdf_io.write_labeled_hdf(
+
+    results_writer.write_labeled_hdf(
         result, output_path, os.path.basename(input_path).split(".")[0]
     )
+
     good = []
     bad = []
     for res in result:

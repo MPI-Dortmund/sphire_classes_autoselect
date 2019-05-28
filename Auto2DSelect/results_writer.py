@@ -27,6 +27,8 @@ SOFTWARE.
 import h5py
 import numpy as np
 import os
+import mrcfile
+
 
 
 def write_labeled_hdf(results, output_path, filename):
@@ -66,15 +68,25 @@ def write_labeled_hdf(results, output_path, filename):
                     ].attrs.items():
                         subgroup.attrs[k] = v
                     counter += 1
+    def write_mrc(original_path, out_path, l):
+        if len(l)>0:
+            with mrcfile.mmap(original_path, permissive=True, mode="r") as original_mrc:
+                with mrcfile.new(out_path) as new_mrc:
+                    new_mrc.set_data(original_mrc.data[l])
 
     # the given results belong at one starting file
     path_original = results[0][0]
     good_index = [result[1] for result in results if result[2] == 1]
     bad_index = [result[1] for result in results if result[2] == 0]
 
-    write_hdf(
-        path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
-    )
-    write_hdf(
-        path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
-    )
+    if os.path.basename(path_original).split(".")[1] == "hdf":
+        write_hdf(
+            path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
+        )
+        write_hdf(
+            path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
+        )
+    elif os.path.basename(path_original).split(".")[1] in ["mrc","mrcs"]:
+        write_mrc(path_original, os.path.join(output_path, filename + "_good.mrcs"), good_index)
+        write_mrc(path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index)
+

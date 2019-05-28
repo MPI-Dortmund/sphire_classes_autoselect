@@ -49,7 +49,7 @@ from .helper import (
     resize_img,
     normalize_img,
     get_list_images,
-    getList_hdf_files,
+    getList_relevant_files,
     getList_files,
 )
 from .augmentation import Augmentation
@@ -93,23 +93,23 @@ class BatchGenerator(Sequence):
         batch_tubles = self.labled_data[start:end]
 
         # Find unique hdf files and read the image
-        unique_hdfs = set()
-        [unique_hdfs.add(data_tuble[0]) for data_tuble in batch_tubles]
+        unique_class_files = set()
+        [unique_class_files.add(data_tuble[0]) for data_tuble in batch_tubles]
         x = []
         y = []
-        for hdf_path in unique_hdfs:
-            indicis_for_hdf = [
+        for class_file_path in unique_class_files:
+            indicis_for_class_file = [
                 data_tuble[1]
                 for data_tuble in batch_tubles
-                if data_tuble[0] == hdf_path
+                if data_tuble[0] == class_file_path
             ]
-            labels_for_hdf = [
+            labels_for_class_file = [
                 data_tuble[2]
                 for data_tuble in batch_tubles
-                if data_tuble[0] == hdf_path
+                if data_tuble[0] == class_file_path
             ]
-            x = x + getImages_fromList_key(hdf_path, indicis_for_hdf)
-            y = y + labels_for_hdf
+            x = x + getImages_fromList_key(class_file_path, indicis_for_class_file)
+            y = y + labels_for_class_file
 
         x = [
             resize_img(img, (self.input_image_shape[0], self.input_image_shape[1]))
@@ -346,9 +346,9 @@ class Auto2DSelectNet(object):
         """
         list_bad = list()
         list_good = list()
-        for good_p in getList_hdf_files(getList_files(good_path)):
+        for good_p in getList_relevant_files(getList_files(good_path)):
             list_good += [(good_p, index, 1.0) for index in get_list_images(good_p)]
-        for bad_p in getList_hdf_files(getList_files(bad_path)):
+        for bad_p in getList_relevant_files(getList_files(bad_path)):
             list_bad += [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
         return list_good + list_bad
 
