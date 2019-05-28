@@ -71,6 +71,9 @@ def _main_():
     bad_path = config["train"]["bad_classes"]
     pretrained_weights = config["train"]["pretrained_weights"]
     output_file = config["train"]["saved_weights_name"]
+    nb_epoch = config["train"]["nb_epoch"]
+    nb_epoch_early_stop = config["train"]["nb_early_stop"]
+    learning_rate = config["train"]["learning_rate"]
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
 
     auto2dnet.train(
@@ -78,6 +81,9 @@ def _main_():
         bad_path,
         save_weights_name=output_file,
         pretrained_weights=pretrained_weights,
+        nb_epoch = nb_epoch,
+        nb_epoch_early = nb_epoch_early_stop,
+        learning_rate = learning_rate
     )
 
 

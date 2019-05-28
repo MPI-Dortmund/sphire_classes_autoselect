@@ -355,7 +355,7 @@ class Auto2DSelectNet(object):
         return list_good + list_bad
 
     def train(
-        self, good_path, bad_path, save_weights_name, pretrained_weights=None, seed=10
+        self, good_path, bad_path, save_weights_name, learning_rate = 10**-4,nb_epoch=50, nb_epoch_early=10, pretrained_weights=None, seed=10
     ):
         """
         Train the network on 2D classes.
@@ -404,10 +404,10 @@ class Auto2DSelectNet(object):
         )
 
         early_stop = EarlyStopping(
-            monitor="val_loss", min_delta=0.0005, patience=10, mode="min", verbose=1
+            monitor="val_loss", min_delta=0.0005, patience=nb_epoch_early, mode="min", verbose=1
         )
         optimizer = Adam(
-            lr=10 ** -4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
+            lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
         self.model.compile(
             optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
@@ -416,7 +416,7 @@ class Auto2DSelectNet(object):
             generator=train_generator,
             validation_data=valid_generator,
             workers=multiprocessing.cpu_count() // 2,
-            epochs=50,
+            epochs=nb_epoch,
             callbacks=[checkpoint, early_stop],
             max_queue_size=multiprocessing.cpu_count(),
             use_multiprocessing=False,
