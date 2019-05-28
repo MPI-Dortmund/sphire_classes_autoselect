@@ -42,7 +42,7 @@ from keras.layers.merge import concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 
 import numpy as np
 
@@ -406,6 +406,14 @@ class Auto2DSelectNet(object):
         early_stop = EarlyStopping(
             monitor="val_loss", min_delta=0.0005, patience=nb_epoch_early, mode="min", verbose=1
         )
+
+        reduceLROnPlateau = ReduceLROnPlateau(
+            monitor="val_loss",
+            factor=0.1,
+            patience=int(nb_epoch_early * 0.6),
+            verbose=1,
+        )
+
         optimizer = Adam(
             lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
@@ -417,7 +425,7 @@ class Auto2DSelectNet(object):
             validation_data=valid_generator,
             workers=multiprocessing.cpu_count() // 2,
             epochs=nb_epoch,
-            callbacks=[checkpoint, early_stop],
+            callbacks=[checkpoint, early_stop, reduceLROnPlateau],
             max_queue_size=multiprocessing.cpu_count(),
             use_multiprocessing=False,
         )
