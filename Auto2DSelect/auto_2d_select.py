@@ -26,7 +26,6 @@ SOFTWARE.
 '''
 import os
 import multiprocessing
-import time
 from keras.utils import Sequence
 from keras.layers import (
     Conv2D,
@@ -34,7 +33,6 @@ from keras.layers import (
     MaxPooling2D,
     BatchNormalization,
     Dense,
-    Flatten,
     UpSampling2D,
     GlobalAveragePooling2D,
 )
