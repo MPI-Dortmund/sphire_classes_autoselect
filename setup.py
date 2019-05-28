@@ -38,6 +38,6 @@ setup(
     description='Select 2d classes automatically',
     entry_points={
         'console_scripts': [
-            'sp_auto2d_train.py = Auto2DSelect.train:_main_',
-            'sp_auto2d_predict.py = Auto2DSelect.predict:_main_']},
+            'sp_cinderella_train.py = Auto2DSelect.train:_main_',
+            'sp_cinderella_predict.py = Auto2DSelect.predict:_main_']},
 )
