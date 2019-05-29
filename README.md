@@ -6,4 +6,4 @@ More information: http://sphire.mpg.de/wiki/doku.php?id=auto_2d_class_selection
 
 ## To Do:
 - [ ] Fine tuning a pretrained model
-- [ ] Add mrcs support
+- [x] Add mrcs support
