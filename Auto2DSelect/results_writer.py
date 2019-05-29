@@ -1,4 +1,4 @@
-'''
+"""
 Automatic 2D class selection tool.
 
 MIT License
@@ -23,13 +23,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-'''
+"""
+import os
 import h5py
 import numpy as np
-import os
 import mrcfile
 
-
+# pylint: disable=C0330, C0301
 
 def write_labeled_hdf(results, output_path, filename):
     """
@@ -40,12 +40,12 @@ def write_labeled_hdf(results, output_path, filename):
     :return: None
     """
 
-    def write_hdf(original_path, out_path, l):
+    def write_hdf(original_path, out_path, image_indices):
         """
         It copies the image from the original file to the result files.
         :param original_path: hdf starting file
         :param out_path: hdf results file
-        :param l: list of index of the images to copy
+        :param image_indices: list of index of the images to copy
         :return: None
         """
         counter = 0
@@ -53,9 +53,9 @@ def write_labeled_hdf(results, output_path, filename):
             with h5py.File(out_path, "w") as f:
                 group = f.create_group("MDF/images/")
 
-                group.attrs["imageid_max"] = np.array([len(l) - 1], dtype=np.int32)
+                group.attrs["imageid_max"] = np.array([len(image_indices) - 1], dtype=np.int32)
 
-                for original_index in l:
+                for original_index in image_indices:
                     subgroup = f.create_group("MDF/images/" + str(counter) + "/")
                     subgroup.create_dataset(
                         "image",
@@ -68,8 +68,16 @@ def write_labeled_hdf(results, output_path, filename):
                     ].attrs.items():
                         subgroup.attrs[k] = v
                     counter += 1
+
     def write_mrc(original_path, out_path, l):
-        if len(l)>0:
+        """
+
+        :param original_path:
+        :param out_path:
+        :param l:
+        :return:
+        """
+        if l:
             with mrcfile.mmap(original_path, permissive=True, mode="r") as original_mrc:
                 with mrcfile.new(out_path) as new_mrc:
                     new_mrc.set_data(original_mrc.data[l])
@@ -86,7 +94,12 @@ def write_labeled_hdf(results, output_path, filename):
         write_hdf(
             path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
         )
-    elif os.path.basename(path_original).split(".")[1] in ["mrc","mrcs"]:
-        write_mrc(path_original, os.path.join(output_path, filename + "_good.mrcs"), good_index)
-        write_mrc(path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index)
-
+    elif os.path.basename(path_original).split(".")[1] in ["mrc", "mrcs"]:
+        write_mrc(
+            path_original,
+            os.path.join(output_path, filename + "_good.mrcs"),
+            good_index,
+        )
+        write_mrc(
+            path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index
+        )

@@ -81,9 +81,9 @@ def _main_():
         bad_path,
         save_weights_name=output_file,
         pretrained_weights=pretrained_weights,
-        nb_epoch = nb_epoch,
-        nb_epoch_early = nb_epoch_early_stop,
-        learning_rate = learning_rate
+        nb_epoch=nb_epoch,
+        nb_epoch_early=nb_epoch_early_stop,
+        learning_rate=learning_rate
     )
 
 

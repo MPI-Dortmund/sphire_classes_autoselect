@@ -28,9 +28,10 @@ SOFTWARE.
 import json
 import multiprocessing
 import argparse
+import os
 from .auto_2d_select import Auto2DSelectNet
 from . import results_writer
-import os
+
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 try:
