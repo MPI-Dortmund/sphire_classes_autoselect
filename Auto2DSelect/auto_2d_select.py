@@ -1,4 +1,4 @@
-'''
+"""
 Automatic 2D class selection tool.
 
 MIT License
@@ -23,7 +23,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-'''
+"""
+# pylint: disable=C0330, C0301
+
 import os
 import multiprocessing
 from keras.utils import Sequence
@@ -61,8 +63,8 @@ class BatchGenerator(Sequence):
     on the batch size), augment the images and return them together with target values.
     """
 
-    def __init__(self, labled_data, name, batch_size, input_image_shape, is_grey=False):
-        self.labled_data = labled_data
+    def __init__(self, labeled_data, name, batch_size, input_image_shape, is_grey=False):
+        self.labeled_data = labeled_data
         self.name = name
         self.batch_size = batch_size
         self.input_image_shape = input_image_shape
@@ -73,7 +75,7 @@ class BatchGenerator(Sequence):
         """
         :return: Return the total number of batches to cover the whole training set.
         """
-        num_batches = int(np.ceil(len(self.labled_data) / self.batch_size))
+        num_batches = int(np.ceil(len(self.labeled_data) / self.batch_size))
         return num_batches
 
     def __getitem__(self, idx):
@@ -82,21 +84,19 @@ class BatchGenerator(Sequence):
                 first output is a numpy array of images
                 second output is a list of integer, which represents the label of the images
         """
-        if len(self.labled_data) == 0:
+        if not self.labeled_data:
             print("ERROR: the labeled data set is empty!")
             exit(-1)
 
-        """ select the set of images"""
         idx = idx % self.__len__()
         start = 0 if idx == 0 else (self.batch_size * idx) - 1
         end = start + self.batch_size
-        batch_tubles = self.labled_data[start:end]
+        batch_tubles = self.labeled_data[start:end]
 
         # Find unique hdf files and read the image
-        unique_class_files = set()
-        [unique_class_files.add(data_tuble[0]) for data_tuble in batch_tubles]
-        x = []
-        y = []
+        unique_class_files = {data_tuble[0] for data_tuble in batch_tubles}
+        images = []
+        labels = []
         for class_file_path in unique_class_files:
             indicis_for_class_file = [
                 data_tuble[1]
@@ -108,57 +108,62 @@ class BatchGenerator(Sequence):
                 for data_tuble in batch_tubles
                 if data_tuble[0] == class_file_path
             ]
-            x = x + getImages_fromList_key(class_file_path, indicis_for_class_file)
-            y = y + labels_for_class_file
+            images = images + getImages_fromList_key(
+                class_file_path, indicis_for_class_file
+            )
+            labels = labels + labels_for_class_file
 
-        x = [
+        images = [
             resize_img(img, (self.input_image_shape[0], self.input_image_shape[1]))
-            for img in x
+            for img in images
         ]  # 2. Downsize images to network input size
         if self.do_augmentation is True:
-            x = [
-                self.augmenter.image_augmentation(img) for img in x
+            images = [
+                self.augmenter.image_augmentation(img) for img in images
             ]  # 3. Do data augmentation (+ flip image randomly (X,Y,TH, NONE)) but only for training, not for validation
-        x = [
-            normalize_img(img) for img in x
+        images = [
+            normalize_img(img) for img in images
         ]  # 4. Normalize images ( subtract mean, divide by standard deviation)
-        x = np.array(x)
-        x = x[:, :, :, np.newaxis]
+        images = np.array(images)
+        images = images[:, :, :, np.newaxis]
         # print(str(idx)+self.name)
-        return x, y
+        return images, labels
 
     def on_epoch_end(self):
         """
         This method shuffle the training data at the end of a epoch.
         :return: None
         """
-        np.random.shuffle(self.labled_data)
+        np.random.shuffle(self.labeled_data)
 
 
-class Auto2DSelectNet(object):
+class Auto2DSelectNet:
+    """
+    Network class for cinderella
+    """
     def __init__(self, batch_size, input_size):
-        '''
+        """
 
         :param batch_size: Batch size for training / prediction
         :param input_size: Input image size
-        '''
+        """
         self.batch_size = batch_size
         self.input_size = input_size
-        self.model = self.build_phosnet_model(self.input_size)
+        self.model = self.build_phosnet_model()
 
-    def build_phosnet_model(self, input_size):
-        '''
+    def build_phosnet_model(self):
+        """
 
         :param input_size: Image input size
         :return: A keras model
-        '''
-        input_image = Input(shape=(input_size[0], input_size[1], 1))
+        """
+        input_image = Input(shape=(self.input_size[0], self.input_size[1], 1))
 
         # name of first layer
         name_first_layer = "conv_1_depth1"
 
         # Layer 1
-        x = Conv2D(
+        layer_out = Conv2D(
             32,
             (3, 3),
             strides=(1, 1),
@@ -166,171 +171,171 @@ class Auto2DSelectNet(object):
             name=name_first_layer,
             use_bias=False,
         )(input_image)
-        x = BatchNormalization(name="norm_1")(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
+        layer_out = BatchNormalization(name="norm_1")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 2
-        x = Conv2D(
+        layer_out = Conv2D(
             64, (3, 3), strides=(1, 1), padding="same", name="conv_2", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_2")(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_2")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 3
-        x = Conv2D(
+        layer_out = Conv2D(
             128, (3, 3), strides=(1, 1), padding="same", name="conv_3", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_3")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_3")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 4
-        x = Conv2D(
+        layer_out = Conv2D(
             64, (1, 1), strides=(1, 1), padding="same", name="conv_4", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_4")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_4")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 5
-        x = Conv2D(
+        layer_out = Conv2D(
             128, (3, 3), strides=(1, 1), padding="same", name="conv_5", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_5")(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_5")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 6
-        x = Conv2D(
+        layer_out = Conv2D(
             256, (3, 3), strides=(1, 1), padding="same", name="conv_6", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_6")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_6")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 7
-        x = Conv2D(
+        layer_out = Conv2D(
             128, (1, 1), strides=(1, 1), padding="same", name="conv_7", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_7")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_7")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 8
-        x = Conv2D(
+        layer_out = Conv2D(
             256, (3, 3), strides=(1, 1), padding="same", name="conv_8", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_8")(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_8")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 9
-        x = Conv2D(
+        layer_out = Conv2D(
             512, (3, 3), strides=(1, 1), padding="same", name="conv_9", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_9")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_9")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 10
-        x = Conv2D(
+        layer_out = Conv2D(
             256, (1, 1), strides=(1, 1), padding="same", name="conv_10", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_10")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_10")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 11
-        x = Conv2D(
+        layer_out = Conv2D(
             512, (3, 3), strides=(1, 1), padding="same", name="conv_11", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_11")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_11")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 12
-        x = Conv2D(
+        layer_out = Conv2D(
             256, (1, 1), strides=(1, 1), padding="same", name="conv_12", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_12")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_12")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 13
-        x = Conv2D(
+        layer_out = Conv2D(
             512, (3, 3), strides=(1, 1), padding="same", name="conv_13", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_13")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_13")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
-        skip_connection = x
+        skip_connection = layer_out
 
-        x = MaxPooling2D(pool_size=(2, 2))(x)
+        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 14
-        x = Conv2D(
+        layer_out = Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_14", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_14")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_14")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 15
-        x = Conv2D(
+        layer_out = Conv2D(
             512, (1, 1), strides=(1, 1), padding="same", name="conv_15", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_15")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_15")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 16
-        x = Conv2D(
+        layer_out = Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_16", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_16")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_16")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 17
-        x = Conv2D(
+        layer_out = Conv2D(
             512, (1, 1), strides=(1, 1), padding="same", name="conv_17", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_17")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_17")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 18
-        x = Conv2D(
+        layer_out = Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_18", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_18")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_18")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 19
-        x = Conv2D(
+        layer_out = Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_19", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_19")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_19")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 20
-        x = Conv2D(
+        layer_out = Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_20", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_20")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_20")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
-        x = UpSampling2D(size=(2, 2))(x)
+        layer_out = UpSampling2D(size=(2, 2))(layer_out)
 
         skip_connection = Conv2D(
             256, (1, 1), strides=(1, 1), padding="same", name="conv_21_", use_bias=False
         )(skip_connection)
         skip_connection = BatchNormalization(name="norm_21_")(skip_connection)
         skip_connection = LeakyReLU(alpha=0.1)(skip_connection)
-        x = concatenate([skip_connection, x])
+        layer_out = concatenate([skip_connection, layer_out])
 
         # Layer 21
-        x = Conv2D(
+        layer_out = Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_22", use_bias=False
-        )(x)
-        x = BatchNormalization(name="norm_22")(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        )(layer_out)
+        layer_out = BatchNormalization(name="norm_22")(layer_out)
+        layer_out = LeakyReLU(alpha=0.1)(layer_out)
 
-        feature_extractor = Model(input_image, x)
+        feature_extractor = Model(input_image, layer_out)
 
-        x = GlobalAveragePooling2D()(feature_extractor(input_image))
+        layer_out = GlobalAveragePooling2D()(feature_extractor(input_image))
 
-        output = Dense(64, activation="relu", name="denseL1")(x)
+        output = Dense(64, activation="relu", name="denseL1")(layer_out)
         output = Dense(10, activation="relu", name="denseL2")(output)
         output = Dense(1, activation="sigmoid", name="denseL3")(output)
 
@@ -339,23 +344,23 @@ class Auto2DSelectNet(object):
         return model
 
     def load_weights(self, model_path):
+        """
+        Load the weights
+        :param model_path: Path to .h5 model file
+        :return: None
+        """
         self.model.load_weights(model_path)
-    def get_data_tubles(self, good_path, bad_path):
-        """
-        :param good_path: Path to the folder with good classes
-        :param bad_path: Path to the folder with bad classes
-        :return: List of tubles (HDF_PATH,CLASS_INDEX,LABEL) LABEL =1 good, 0 bad
-        """
-        list_bad = list()
-        list_good = list()
-        for good_p in getList_relevant_files(getList_files(good_path)):
-            list_good += [(good_p, index, 1.0) for index in get_list_images(good_p)]
-        for bad_p in getList_relevant_files(getList_files(bad_path)):
-            list_bad += [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
-        return list_good + list_bad
 
     def train(
-        self, good_path, bad_path, save_weights_name, learning_rate = 10**-4,nb_epoch=50, nb_epoch_early=10, pretrained_weights=None, seed=10
+        self,
+        good_path,
+        bad_path,
+        save_weights_name,
+        learning_rate=10 ** -4,
+        nb_epoch=50,
+        nb_epoch_early=10,
+        pretrained_weights=None,
+        seed=10,
     ):
         """
         Train the network on 2D classes.
@@ -373,20 +378,20 @@ class Auto2DSelectNet(object):
             print("Load pretrained weights", pretrained_weights)
             self.model.load_weights(pretrained_weights, by_name=True)
 
-        labeled_data = self.get_data_tubles(good_path, bad_path)
+        labeled_data = get_data_tubles(good_path, bad_path)
         train_valid_split = int(0.8 * len(labeled_data))
         np.random.shuffle(labeled_data)
         train_data = labeled_data[:train_valid_split]
         valid_data = labeled_data[train_valid_split:]
 
         train_generator = BatchGenerator(
-            labled_data=train_data,
+            labeled_data=train_data,
             name="train",
             batch_size=self.batch_size,
             input_image_shape=self.input_size,
         )
         valid_generator = BatchGenerator(
-            labled_data=valid_data,
+            labeled_data=valid_data,
             name="valid",
             batch_size=self.batch_size,
             input_image_shape=self.input_size,
@@ -404,10 +409,14 @@ class Auto2DSelectNet(object):
         )
 
         early_stop = EarlyStopping(
-            monitor="val_loss", min_delta=0.0005, patience=nb_epoch_early, mode="min", verbose=1
+            monitor="val_loss",
+            min_delta=0.0005,
+            patience=nb_epoch_early,
+            mode="min",
+            verbose=1,
         )
 
-        reduceLROnPlateau = ReduceLROnPlateau(
+        reduce_lr_on_plateau = ReduceLROnPlateau(
             monitor="val_loss",
             factor=0.1,
             patience=int(nb_epoch_early * 0.6),
@@ -425,7 +434,7 @@ class Auto2DSelectNet(object):
             validation_data=valid_generator,
             workers=multiprocessing.cpu_count() // 2,
             epochs=nb_epoch,
-            callbacks=[checkpoint, early_stop, reduceLROnPlateau],
+            callbacks=[checkpoint, early_stop, reduce_lr_on_plateau],
             max_queue_size=multiprocessing.cpu_count(),
             use_multiprocessing=False,
         )
@@ -444,7 +453,7 @@ class Auto2DSelectNet(object):
         results = []
         from tqdm import tqdm
 
-        for img_chunk in tqdm(list(self.chunks(img_list, self.batch_size))):
+        for img_chunk in tqdm(list(chunks(img_list, self.batch_size))):
             list_img = getImages_fromList_key(input_path, img_chunk)
             result = self.predict_np_list(list_img)
             results.append(result)
@@ -463,16 +472,16 @@ class Auto2DSelectNet(object):
 
         return result_tuples
 
-    def predict_np_arr(self,images):
+    def predict_np_arr(self, images):
         """
         Run the prediction on a 3D with format numpy array [IMDEX_INDEX, IMAGE_WIDTH, IMAGE_HEIGHT].
         :param images: numpy array in the format [IMDEX_INDEX, IMAGE_WIDTH, IMAGE_HEIGHT]
         :return: 1D numpy array with probability of being a good class
         """
         list_img = [images[i] for i in range(images.shape[0])]
-        return self.predict_np_list(self,list_img)
+        return self.predict_np_list(self, list_img)
 
-    def predict_np_list(self,list_img):
+    def predict_np_list(self, list_img):
         """
         Run the prediction on list of 2d numpy arrays.
 
@@ -491,7 +500,22 @@ class Auto2DSelectNet(object):
         return result
 
 
-    def chunks(self, l, n):
-        """Yield successive n-sized chunks from l."""
-        for i in range(0, len(l), n):
-            yield l[i : i + n]
+def get_data_tubles(good_path, bad_path):
+    """
+    :param good_path: Path to the folder with good classes
+    :param bad_path: Path to the folder with bad classes
+    :return: List of tubles (HDF_PATH,CLASS_INDEX,LABEL) LABEL =1 good, 0 bad
+    """
+    list_bad = list()
+    list_good = list()
+    for good_p in getList_relevant_files(getList_files(good_path)):
+        list_good += [(good_p, index, 1.0) for index in get_list_images(good_p)]
+    for bad_p in getList_relevant_files(getList_files(bad_path)):
+        list_bad += [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
+    return list_good + list_bad
+
+
+def chunks(list_to_divide, number_of_chunks):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(list_to_divide), number_of_chunks):
+        yield list_to_divide[i : i + number_of_chunks]
