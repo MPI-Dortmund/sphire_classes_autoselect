@@ -338,6 +338,8 @@ class Auto2DSelectNet(object):
         model.summary()
         return model
 
+    def load_weights(self, model_path):
+        self.model.load_weights(model_path)
     def get_data_tubles(self, good_path, bad_path):
         """
         :param good_path: Path to the folder with good classes
@@ -437,23 +439,14 @@ class Auto2DSelectNet(object):
         :param good_thresh: Threshold for selecting good classes
         :return: Return a list of tuples with the format (input_path, index_in_hdf, label, confidence)
         """
-        self.model.load_weights(model_path)
+        self.load_weights(model_path)
         img_list = get_list_images(input_path)
         results = []
         from tqdm import tqdm
 
         for img_chunk in tqdm(list(self.chunks(img_list, self.batch_size))):
             list_img = getImages_fromList_key(input_path, img_chunk)
-            list_img = [
-                resize_img(img, (self.input_size[0], self.input_size[1]))
-                for img in list_img
-            ]  # 2. Downsize images to network input size
-            list_img = [normalize_img(img) for img in list_img]
-            arr_img = np.array(list_img)
-            arr_img = np.expand_dims(arr_img, 3)
-
-            pred_res = self.model.predict(arr_img)
-            result = pred_res[:, 0]
+            result = self.predict_np_list(list_img)
             results.append(result)
 
         result = np.concatenate(tuple(results))
@@ -469,6 +462,34 @@ class Auto2DSelectNet(object):
             result_tuples.append((input_path, index_in_hdf, label, confidence))
 
         return result_tuples
+
+    def predict_np_arr(self,images):
+        """
+        Run the prediction on a 3D with format numpy array [IMDEX_INDEX, IMAGE_WIDTH, IMAGE_HEIGHT].
+        :param images: numpy array in the format [IMDEX_INDEX, IMAGE_WIDTH, IMAGE_HEIGHT]
+        :return: 1D numpy array with probability of being a good class
+        """
+        list_img = [images[i] for i in range(images.shape[0])]
+        return self.predict_np_list(self,list_img)
+
+    def predict_np_list(self,list_img):
+        """
+        Run the prediction on list of 2d numpy arrays.
+
+        :param list_img: List of 2d numpy arrays (images)
+        :return: 1D numpy array with probability of being a good class
+        """
+        list_img = [
+            resize_img(img, (self.input_size[0], self.input_size[1]))
+            for img in list_img
+        ]  # 2. Downsize images to network input size
+        list_img = [normalize_img(img) for img in list_img]
+        arr_img = np.array(list_img)
+        arr_img = np.expand_dims(arr_img, 3)
+        pred_res = self.model.predict(arr_img)
+        result = pred_res[:, 0]
+        return result
+
 
     def chunks(self, l, n):
         """Yield successive n-sized chunks from l."""
