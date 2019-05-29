@@ -32,7 +32,8 @@ setup(
         "h5py >= 2.5.0",
         "tensorflow-gpu == 1.10.1",
         "pillow",
-        "tqdm"
+        "tqdm",
+        "mrcfile"
     ],
     author_email='thorsten.wagner@mpi-dortmund.mpg.de',
     description='Select 2d classes automatically',
