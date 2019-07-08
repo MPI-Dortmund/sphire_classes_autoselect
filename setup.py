@@ -28,9 +28,9 @@ setup(
     author='Thorsten Wagner',
     install_requires=[
         "Keras >= 2.2.4",
-        "numpy <= 1.14.5",
+        "numpy == 1.15.4",
         "h5py >= 2.5.0",
-        "tensorflow-gpu == 1.10.1",
+        "tensorflow-gpu == 1.12.3",
         "pillow",
         "tqdm",
         "mrcfile"

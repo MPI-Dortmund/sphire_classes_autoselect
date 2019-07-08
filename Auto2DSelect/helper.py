@@ -45,7 +45,7 @@ def checkfiles(path_to_files):
     :param path_to_files:    list of paths
     :return:
     """
-    if isinstance(path_to_files, list) or isinstance(path_to_files, tuple):
+    if isinstance(path_to_files, (list,tuple)):
         for p in path_to_files:
             if not path.isfile(p):
                 return False
@@ -88,7 +88,7 @@ def getList_relevant_files(path_to_files):
     :return: list of valid hdf
     """
     return [
-        path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file) or path_to_file[-4:]=='mrcs' or path_to_file[-3:]=='mrc'
+        path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file) or path_to_file[-4:]=='mrcs' or path_to_file[-3:] == 'mrc'
     ]
 
 
@@ -103,7 +103,7 @@ def get_list_images(path_to_file):
     """
     print("Try to list images on", path_to_file)
     if path.isfile(path_to_file):
-        if path.basename(path_to_file).split(".")[1]=='hdf':
+        if path.basename(path_to_file).split(".")[1] == 'hdf':
             try:
                 with h5py.File(path_to_file, "r") as f:
                     data = [int(v) for v in list(f["MDF"]["images"])]
@@ -166,7 +166,7 @@ def getImages_fromList_key(path_to_file, list_images):
                 print(list_images)
                 print("there are " + str(len(f["MDF"]["images"])))
                 exit()
-        elif path.basename(path_to_file).split('.')[1] in ["mrc","mrcs"]:
+        elif path.basename(path_to_file).split('.')[1] in ["mrc", "mrcs"]:
             data = []
             with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
                 if isinstance(list_images, list) or isinstance(list_images, tuple):

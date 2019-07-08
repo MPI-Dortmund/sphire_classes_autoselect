@@ -31,7 +31,7 @@ import argparse
 import os
 from .auto_2d_select import Auto2DSelectNet
 from . import results_writer
-
+import h5py
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 try:
@@ -62,6 +62,8 @@ ARGPARSER.add_argument(
 
 ARGPARSER.add_argument("--gpu", default=-1, type=int, help="GPU to run on.")
 
+ARGPARSER.add_argument("-b","--batch_size", default=32, type=int, help="Number of mini-batches during prediction.")
+
 ARGPARSER.add_argument("-c", "--config", required=True, help="Path to config file.")
 
 
@@ -81,16 +83,16 @@ def _main_():
         str_gpu = str(args.gpu)
         os.environ["CUDA_VISIBLE_DEVICES"] = str_gpu
 
-    with open(args.config) as config_buffer:
+    with h5py.File(weights_path, mode="r") as f:
         try:
-            config = json.load(config_buffer)
-        except json.JSONDecodeError:
-            print(
-                "Your configuration file seems to be corruped. Please check if it is valid."
-            )
+            import numpy as np
+            input_size = tuple(f["input_size"])
+        except KeyError:
+            print("Did not found input size in your model file. Did you train JANNI with older version than 0.3? In that case, please retrain!")
+            import sys
+            sys.exit(0)
 
-    input_size = config["model"]["input_size"]
-    batch_size = config["train"]["batch_size"]
+    batch_size = args.batch_size
 
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
     result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold)

@@ -117,10 +117,15 @@ class BatchGenerator(Sequence):
             resize_img(img, (self.input_image_shape[0], self.input_image_shape[1]))
             for img in images
         ]  # 2. Downsize images to network input size
+
+
         if self.do_augmentation is True:
+
             images = [
                 self.augmenter.image_augmentation(img) for img in images
             ]  # 3. Do data augmentation (+ flip image randomly (X,Y,TH, NONE)) but only for training, not for validation
+
+
         images = [
             normalize_img(img) for img in images
         ]  # 4. Normalize images ( subtract mean, divide by standard deviation)
@@ -403,7 +408,7 @@ class Auto2DSelectNet:
             monitor="val_loss",
             verbose=1,
             save_best_only=True,
-            save_weights_only=False,
+            save_weights_only=True,
             mode="min",
             period=1,
         )
@@ -438,6 +443,13 @@ class Auto2DSelectNet:
             max_queue_size=multiprocessing.cpu_count(),
             use_multiprocessing=False,
         )
+
+        import h5py
+        with h5py.File(save_weights_name, mode='r+') as f:
+            f["input_size"] = self.input_size
+        print("Meta data saved in model.")
+
+
 
     def predict(self, input_path, model_path, good_thresh=0.5):
         """
