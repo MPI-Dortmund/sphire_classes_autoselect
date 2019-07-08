@@ -74,7 +74,13 @@ class Augmentation:
                 #    image = np.clip(image, 0, 255)
                 image = image.astype(np.uint8, copy=False)
 
-        return helper.flip_img(image, random.randint(0, 3))
+        # Random flip
+        image = helper.flip_img(image, random.randint(0, 3))
+
+        # Random rotation
+        rand_rotation = np.random.randint(4)
+        image = np.rot90(image, k=rand_rotation)
+        return image
 
     def gauss_blur(self, image, sigma_range=(0, 3)):
         """
