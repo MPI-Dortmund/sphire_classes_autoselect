@@ -10,7 +10,9 @@
 		"pretrained_weights": "gmodel_phosnet_20190516.h5",
 		"saved_weights_name": "my_model.h5",
 		"learning_rate": 1e-4,
-		"nb_epoch": 50,
-		"nb_early_stop": 5
+		"nb_epoch": 100,
+		"nb_early_stop": 15,
+		"train_valid_thresh": 0.8,
+		"max_val_img_per_file": -1
 	}
 }
