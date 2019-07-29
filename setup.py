@@ -23,14 +23,17 @@ setup(
     version=find_version("Auto2DSelect", "__init__.py"),
     python_requires='>3.4.0',
     packages=['Auto2DSelect'],
-    url='https://github.com/MPI-Dortmund/sphire_classes_autoselect',
+    url='https://github.com/MPI-Dortmund/sphire_classes_ausptoselect',
     license='MIT',
     author='Thorsten Wagner',
+    extras_require = {
+        'gpu':  ['tensorflow-gpu == 1.10.1'],
+        'cpu': ['tensorflow == 1.10.1']
+    },
     install_requires=[
         "Keras >= 2.2.4",
-        "numpy == 1.15.4",
+        "numpy == 1.14.5",
         "h5py >= 2.5.0",
-        "tensorflow-gpu == 1.12.3",
         "pillow",
         "tqdm",
         "mrcfile"
