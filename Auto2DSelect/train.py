@@ -74,6 +74,13 @@ def _main_():
     nb_epoch = config["train"]["nb_epoch"]
     nb_epoch_early_stop = config["train"]["nb_early_stop"]
     learning_rate = config["train"]["learning_rate"]
+    train_valid_thresh = 0.8
+    if "train_valid_thresh" in config["train"]:
+        train_valid_thresh = config["train"]["train_valid_thresh"]
+    max_valid_img_per_file = -1
+    if "max_valid_img_per_file" in config["train"]:
+        if config["train"]["max_valid_img_per_file"] is not None:
+            max_valid_img_per_file = config["train"]["max_valid_img_per_file"]
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
 
     auto2dnet.train(
@@ -83,7 +90,9 @@ def _main_():
         pretrained_weights=pretrained_weights,
         nb_epoch=nb_epoch,
         nb_epoch_early=nb_epoch_early_stop,
-        learning_rate=learning_rate
+        learning_rate=learning_rate,
+        train_val_thresh=train_valid_thresh,
+        max_valid_img_per_file=max_valid_img_per_file
     )
 
 
