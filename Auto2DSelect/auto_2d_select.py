@@ -366,6 +366,8 @@ class Auto2DSelectNet:
         nb_epoch_early=10,
         pretrained_weights=None,
         seed=10,
+        train_val_thresh=0.8,
+        max_valid_img_per_file=10
     ):
         """
         Train the network on 2D classes.
@@ -383,12 +385,15 @@ class Auto2DSelectNet:
             print("Load pretrained weights", pretrained_weights)
             self.model.load_weights(pretrained_weights, by_name=True)
 
+        '''
         labeled_data = get_data_tubles(good_path, bad_path)
         train_valid_split = int(0.8 * len(labeled_data))
+
         np.random.shuffle(labeled_data)
         train_data = labeled_data[:train_valid_split]
         valid_data = labeled_data[train_valid_split:]
-
+        '''
+        train_data, valid_data = get_train_valid_tubles(good_path, bad_path, train_val_thresh, max_valid_img_per_file)
         train_generator = BatchGenerator(
             labeled_data=train_data,
             name="train",
@@ -437,7 +442,7 @@ class Auto2DSelectNet:
         self.model.fit_generator(
             generator=train_generator,
             validation_data=valid_generator,
-            workers=multiprocessing.cpu_count() // 2,
+            workers=1,
             epochs=nb_epoch,
             callbacks=[checkpoint, early_stop, reduce_lr_on_plateau],
             max_queue_size=multiprocessing.cpu_count(),
@@ -526,6 +531,34 @@ def get_data_tubles(good_path, bad_path):
         list_bad += [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
     return list_good + list_bad
 
+def get_train_valid_tubles(good_path, bad_path,thresh=0.9, max_val_img_per_file=-1):
+    list_bad_train = list()
+    list_good_train = list()
+    list_bad_valid = list()
+    list_good_valid = list()
+
+    for good_p in getList_relevant_files(getList_files(good_path)):
+        good_tubles = [(good_p, index, 1.0) for index in get_list_images(good_p)]
+        train_valid_split = int(thresh * len(good_tubles))
+        if max_val_img_per_file > -1:
+            train_valid_split =max(train_valid_split,len(good_tubles)-max_val_img_per_file)
+        np.random.shuffle(good_tubles)
+
+        list_good_train += good_tubles[:train_valid_split]
+        list_good_valid += good_tubles[train_valid_split:]
+
+    for bad_p in getList_relevant_files(getList_files(bad_path)):
+        bad_tubles = [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
+        train_valid_split = int(thresh * len(bad_tubles))
+        if max_val_img_per_file > -1:
+            train_valid_split =max(train_valid_split,len(bad_tubles)-max_val_img_per_file)
+        np.random.shuffle(bad_tubles)
+
+        list_bad_train += bad_tubles[:train_valid_split]
+        list_bad_valid += bad_tubles[train_valid_split:]
+    list_train = list_good_train + list_bad_train
+    list_valid = list_good_valid + list_bad_valid
+    return list_train, list_valid
 
 def chunks(list_to_divide, number_of_chunks):
     """Yield successive n-sized chunks from l."""
