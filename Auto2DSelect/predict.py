@@ -64,8 +64,6 @@ ARGPARSER.add_argument("--gpu", default=-1, type=int, help="GPU to run on.")
 
 ARGPARSER.add_argument("-b","--batch_size", default=32, type=int, help="Number of mini-batches during prediction.")
 
-ARGPARSER.add_argument("-c", "--config", required=True, help="Path to config file.")
-
 
 def _main_():
     args = ARGPARSER.parse_args()
