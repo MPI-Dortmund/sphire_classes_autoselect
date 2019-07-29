@@ -109,8 +109,11 @@ def _main_():
             bad.append(res[1])
     good.sort()
     bad.sort()
-    print("\n Good classes (", len(good), ")", good, "\n")
-    print("\n Bad classes (", len(bad), ")", bad, "\n")
+
+    fraction_good = int(100*(len(good) / (len(good)+len(bad))))
+    fraction_bad = int(100 * (len(bad) / (len(good) + len(bad))))
+    print("\n Good classes: ", len(good), "/", len(good)+len(bad),"(",fraction_good,"% )",  "\n")
+    print("\n Bad classes: ", len(bad), "/", len(good)+len(bad),"(",fraction_bad,"% )",  "\n")
 
 
 if __name__ == "__main__":
