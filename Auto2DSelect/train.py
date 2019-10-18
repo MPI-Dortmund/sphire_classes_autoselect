@@ -30,7 +30,7 @@ import multiprocessing
 import argparse
 import os
 import json
-from .auto_2d_select import Auto2DSelectNet
+
 
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -81,6 +81,8 @@ def _main_():
     if "max_valid_img_per_file" in config["train"]:
         if config["train"]["max_valid_img_per_file"] is not None:
             max_valid_img_per_file = config["train"]["max_valid_img_per_file"]
+
+    from .auto_2d_select import Auto2DSelectNet
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
 
     auto2dnet.train(

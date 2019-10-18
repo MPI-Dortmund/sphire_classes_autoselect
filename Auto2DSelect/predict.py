@@ -29,7 +29,6 @@ import json
 import multiprocessing
 import argparse
 import os
-from .auto_2d_select import Auto2DSelectNet
 from . import results_writer
 import h5py
 
@@ -91,7 +90,7 @@ def _main_():
             sys.exit(0)
 
     batch_size = args.batch_size
-
+    from .auto_2d_select import Auto2DSelectNet
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
     result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold)
 
