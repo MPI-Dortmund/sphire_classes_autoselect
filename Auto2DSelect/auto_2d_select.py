@@ -37,11 +37,13 @@ from keras.layers import (
     Dense,
     UpSampling2D,
     GlobalAveragePooling2D,
+    Dropout
 )
 from keras.layers.merge import concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.optimizers import Adam
+from keras import backend as K
 from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 
 import numpy as np
@@ -341,7 +343,9 @@ class Auto2DSelectNet:
         layer_out = GlobalAveragePooling2D()(feature_extractor(input_image))
 
         output = Dense(64, activation="relu", name="denseL1")(layer_out)
+        #output = Dropout(0.2)(output)
         output = Dense(10, activation="relu", name="denseL2")(output)
+        #output = Dropout(0.2)(output)
         output = Dense(1, activation="sigmoid", name="denseL3")(output)
 
         model = Model(input_image, output)
@@ -355,6 +359,9 @@ class Auto2DSelectNet:
         :return: None
         """
         self.model.load_weights(model_path)
+
+    # Define our custom loss function
+
 
     def train(
         self,
@@ -393,7 +400,7 @@ class Auto2DSelectNet:
         train_data = labeled_data[:train_valid_split]
         valid_data = labeled_data[train_valid_split:]
         '''
-        train_data, valid_data = get_train_valid_tubles(good_path, bad_path, train_val_thresh, max_valid_img_per_file)
+        train_data, valid_data, weights = get_train_valid_tubles(good_path, bad_path, train_val_thresh, max_valid_img_per_file)
         train_generator = BatchGenerator(
             labeled_data=train_data,
             name="train",
@@ -437,7 +444,7 @@ class Auto2DSelectNet:
             lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
         self.model.compile(
-            optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
+            optimizer=optimizer,metrics=["accuracy"],  loss="binary_crossentropy",
         )
         self.model.fit_generator(
             generator=train_generator,
@@ -447,6 +454,7 @@ class Auto2DSelectNet:
             callbacks=[checkpoint, early_stop, reduce_lr_on_plateau],
             max_queue_size=multiprocessing.cpu_count(),
             use_multiprocessing=False,
+            class_weight=weights
         )
 
         import h5py
@@ -556,11 +564,62 @@ def get_train_valid_tubles(good_path, bad_path,thresh=0.9, max_val_img_per_file=
 
         list_bad_train += bad_tubles[:train_valid_split]
         list_bad_valid += bad_tubles[train_valid_split:]
+    print("GOOD",len(list_good_train),"BAD",len(list_bad_train))
+    
     list_train = list_good_train + list_bad_train
     list_valid = list_good_valid + list_bad_valid
-    return list_train, list_valid
+    weight_good = 1 - float(len(list_good_train))/len(list_train)
+    weight_bad = 1 - float(len(list_bad_train))/len(list_train)
+    return list_train, list_valid, (weight_bad,weight_good)
 
 def chunks(list_to_divide, number_of_chunks):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(list_to_divide), number_of_chunks):
         yield list_to_divide[i : i + number_of_chunks]
+
+
+def focal_loss(y_true, y_pred):
+    """Focal loss for multi-classification
+    FL(p_t)=-alpha(1-p_t)^{gamma}ln(p_t)
+    Notice: y_pred is probability after softmax
+    gradient is d(Fl)/d(p_t) not d(Fl)/d(x) as described in paper
+    d(Fl)/d(p_t) * [p_t(1-p_t)] = d(Fl)/d(x)
+    Focal Loss for Dense Object Detection
+    https://arxiv.org/abs/1708.02002
+
+    Arguments:
+        y_true {tensor} -- ground truth labels, shape of [batch_size, num_cls]
+        y_pred {tensor} -- model's output, shape of [batch_size, num_cls]
+
+    Keyword Arguments:
+        gamma {float} -- (default: {2.0})
+        alpha {float} -- (default: {4.0})
+
+    Returns:
+        [tensor] -- loss.
+    """
+    import tensorflow as tf
+    gamma = 2.0
+    alpha = 4.0
+    epsilon = 1.e-9
+    y_true = tf.convert_to_tensor(y_true, tf.float32)
+    y_pred = tf.convert_to_tensor(y_pred, tf.float32)
+
+    model_out = tf.add(y_pred, epsilon)
+    ce = tf.multiply(y_true, -tf.log(model_out))
+    weight = tf.multiply(y_true, tf.pow(tf.subtract(1., model_out), gamma))
+    fl = tf.multiply(alpha, tf.multiply(weight, ce))
+    reduced_fl = tf.reduce_max(fl, axis=1)
+    return tf.reduce_mean(reduced_fl)
+
+
+def focal_loss(y_true, y_pred):
+    import tensorflow as tf
+    gamma = 2.0
+    alpha = 4.0
+    #epsilon = 1.e-9
+    #y_pred = tf.add(y_pred, epsilon)
+    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
+    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
+    return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1)) - \
+           K.sum(alpha * K.pow(pt_0, gamma) * K.log(1. - pt_0))
