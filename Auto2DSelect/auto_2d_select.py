@@ -44,8 +44,8 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.optimizers import Adam
 from keras import backend as K
-from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-
+from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, TensorBoard
+from swa.keras import SWA
 import numpy as np
 
 from .helper import (
@@ -433,12 +433,43 @@ class Auto2DSelectNet:
             verbose=1,
         )
 
+        try:
+            os.makedirs(os.path.expanduser("logs/"))
+        except:
+            pass
+
+        tb_counter = (
+                len(
+                    [
+                        log
+                        for log in os.listdir(os.path.expanduser("logs/"))
+                        if "cinderella" in log
+                    ]
+                )
+                + 1
+        )
+        tensorboard = TensorBoard(
+            log_dir=os.path.expanduser("logs/") + "cinderella" + "_" + str(tb_counter),
+            histogram_freq=0,
+            write_graph=True,
+            write_images=False,
+        )
+
         reduce_lr_on_plateau = ReduceLROnPlateau(
             monitor="val_loss",
             factor=0.1,
             patience=int(nb_epoch_early * 0.6),
             verbose=1,
         )
+        # define swa callback
+        '''
+        swa = SWA(start_epoch=5,
+                  lr_schedule='cyclic',
+                  swa_lr=learning_rate*0.1,
+                  swa_lr2=learning_rate,
+                  swa_freq=4,
+                  verbose=1)
+        '''
 
         optimizer = Adam(
             lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
@@ -451,15 +482,21 @@ class Auto2DSelectNet:
             validation_data=valid_generator,
             workers=1,
             epochs=nb_epoch,
-            callbacks=[checkpoint, early_stop, reduce_lr_on_plateau],
+            callbacks=[checkpoint, early_stop, tensorboard],
             max_queue_size=multiprocessing.cpu_count(),
             use_multiprocessing=False,
             class_weight=weights
         )
+        #average_filename = "average.h5"
+        #self.model.save_weights(average_filename)
 
         import h5py
         with h5py.File(save_weights_name, mode='r+') as f:
             f["input_size"] = self.input_size
+
+        #with h5py.File(average_filename, mode='r+') as f:
+        #    f["input_size"] = self.input_size
+
         print("Meta data saved in model.")
 
 
