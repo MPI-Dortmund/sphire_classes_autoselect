@@ -37,22 +37,28 @@ from keras.layers import (
     Dense,
     UpSampling2D,
     GlobalAveragePooling2D,
-    Dropout
+    Dropout,
 )
 from keras.layers.merge import concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model
 from keras.optimizers import Adam
 from keras import backend as K
-from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, TensorBoard
-from swa.keras import SWA
-import numpy as np
+from keras.callbacks import (
+    ModelCheckpoint,
+    EarlyStopping,
+    ReduceLROnPlateau,
+    TensorBoard,
+)
 
+# from swa.keras import SWA
+import numpy as np
+from Auto2DSelect.SGDRSchedular import SGDRScheduler
 from .helper import (
     getImages_fromList_key,
     resize_img,
     normalize_img,
-    get_list_images,
+    get_key_list_images,
     getList_relevant_files,
     getList_files,
 )
@@ -65,7 +71,9 @@ class BatchGenerator(Sequence):
     on the batch size), augment the images and return them together with target values.
     """
 
-    def __init__(self, labeled_data, name, batch_size, input_image_shape, is_grey=False):
+    def __init__(
+        self, labeled_data, name, batch_size, input_image_shape, is_grey=False
+    ):
         self.labeled_data = labeled_data
         self.name = name
         self.batch_size = batch_size
@@ -110,15 +118,17 @@ class BatchGenerator(Sequence):
                 for data_tuble in batch_tubles
                 if data_tuble[0] == class_file_path
             ]
-            images = images + getImages_fromList_key(
-                class_file_path, indicis_for_class_file
-            )
+            class_index_tubles = [(class_file_path, indi) for indi in indicis_for_class_file]
+            images_from_file = getImages_fromList_key(class_index_tubles)
+
+            images_from_file = [
+                resize_img(img, (self.input_image_shape[0], self.input_image_shape[1]))
+                for img in images_from_file
+            ]  # 2. Downsize images to network input size
+
+            images = images + images_from_file
             labels = labels + labels_for_class_file
 
-        images = [
-            resize_img(img, (self.input_image_shape[0], self.input_image_shape[1]))
-            for img in images
-        ]  # 2. Downsize images to network input size
 
 
         if self.do_augmentation is True:
@@ -126,7 +136,6 @@ class BatchGenerator(Sequence):
             images = [
                 self.augmenter.image_augmentation(img) for img in images
             ]  # 3. Do data augmentation (+ flip image randomly (X,Y,TH, NONE)) but only for training, not for validation
-
 
         images = [
             normalize_img(img) for img in images
@@ -148,6 +157,7 @@ class Auto2DSelectNet:
     """
     Network class for cinderella
     """
+
     def __init__(self, batch_size, input_size):
         """
 
@@ -343,9 +353,9 @@ class Auto2DSelectNet:
         layer_out = GlobalAveragePooling2D()(feature_extractor(input_image))
 
         output = Dense(64, activation="relu", name="denseL1")(layer_out)
-        #output = Dropout(0.2)(output)
+        # output = Dropout(0.2)(output)
         output = Dense(10, activation="relu", name="denseL2")(output)
-        #output = Dropout(0.2)(output)
+        # output = Dropout(0.2)(output)
         output = Dense(1, activation="sigmoid", name="denseL3")(output)
 
         model = Model(input_image, output)
@@ -362,7 +372,6 @@ class Auto2DSelectNet:
 
     # Define our custom loss function
 
-
     def train(
         self,
         good_path,
@@ -374,7 +383,8 @@ class Auto2DSelectNet:
         pretrained_weights=None,
         seed=10,
         train_val_thresh=0.8,
-        max_valid_img_per_file=10
+        max_valid_img_per_file=10,
+        warmrestarts=True,
     ):
         """
         Train the network on 2D classes.
@@ -392,15 +402,17 @@ class Auto2DSelectNet:
             print("Load pretrained weights", pretrained_weights)
             self.model.load_weights(pretrained_weights, by_name=True)
 
-        '''
+        """
         labeled_data = get_data_tubles(good_path, bad_path)
         train_valid_split = int(0.8 * len(labeled_data))
 
         np.random.shuffle(labeled_data)
         train_data = labeled_data[:train_valid_split]
         valid_data = labeled_data[train_valid_split:]
-        '''
-        train_data, valid_data, weights = get_train_valid_tubles(good_path, bad_path, train_val_thresh, max_valid_img_per_file)
+        """
+        train_data, valid_data, weights = get_train_valid_tubles(
+            good_path, bad_path, train_val_thresh, max_valid_img_per_file
+        )
         train_generator = BatchGenerator(
             labeled_data=train_data,
             name="train",
@@ -415,6 +427,7 @@ class Auto2DSelectNet:
         )
 
         # Define callbacks
+        all_callbacks = []
         checkpoint = ModelCheckpoint(
             save_weights_name,
             monitor="val_loss",
@@ -424,6 +437,7 @@ class Auto2DSelectNet:
             mode="min",
             period=1,
         )
+        all_callbacks.append(checkpoint)
 
         early_stop = EarlyStopping(
             monitor="val_loss",
@@ -432,21 +446,21 @@ class Auto2DSelectNet:
             mode="min",
             verbose=1,
         )
-
+        all_callbacks.append(early_stop)
         try:
             os.makedirs(os.path.expanduser("logs/"))
         except:
             pass
 
         tb_counter = (
-                len(
-                    [
-                        log
-                        for log in os.listdir(os.path.expanduser("logs/"))
-                        if "cinderella" in log
-                    ]
-                )
-                + 1
+            len(
+                [
+                    log
+                    for log in os.listdir(os.path.expanduser("logs/"))
+                    if "cinderella" in log
+                ]
+            )
+            + 1
         )
         tensorboard = TensorBoard(
             log_dir=os.path.expanduser("logs/") + "cinderella" + "_" + str(tb_counter),
@@ -454,52 +468,63 @@ class Auto2DSelectNet:
             write_graph=True,
             write_images=False,
         )
-
-        reduce_lr_on_plateau = ReduceLROnPlateau(
-            monitor="val_loss",
-            factor=0.1,
-            patience=int(nb_epoch_early * 0.6),
-            verbose=1,
-        )
+        all_callbacks.append(tensorboard)
+        if not warmrestarts:
+            reduce_lr_on_plateau = ReduceLROnPlateau(
+                monitor="val_loss",
+                factor=0.1,
+                patience=int(nb_epoch_early * 0.6),
+                verbose=1,
+            )
+            all_callbacks.append(reduce_lr_on_plateau)
+        else:
+            schedule = SGDRScheduler(
+                min_lr=1e-7,
+                max_lr=1e-4,
+                steps_per_epoch=len(train_generator),
+                lr_decay=0.9,
+                cycle_length=5,
+                mult_factor=1.5,
+            )
+            all_callbacks.append(schedule)
         # define swa callback
-        '''
+        """
         swa = SWA(start_epoch=5,
                   lr_schedule='cyclic',
                   swa_lr=learning_rate*0.1,
                   swa_lr2=learning_rate,
                   swa_freq=4,
                   verbose=1)
-        '''
+        """
 
         optimizer = Adam(
             lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
         self.model.compile(
-            optimizer=optimizer,metrics=["accuracy"],  loss="binary_crossentropy",
+            optimizer=optimizer, metrics=["accuracy"], loss="binary_crossentropy",
         )
         self.model.fit_generator(
             generator=train_generator,
             validation_data=valid_generator,
-            workers=1,
+            workers=6,
             epochs=nb_epoch,
-            callbacks=[checkpoint, early_stop, tensorboard],
+            callbacks=all_callbacks,
             max_queue_size=multiprocessing.cpu_count(),
-            use_multiprocessing=False,
-            class_weight=weights
+            use_multiprocessing=True,
+            class_weight=weights,
         )
-        #average_filename = "average.h5"
-        #self.model.save_weights(average_filename)
+        # average_filename = "average.h5"
+        # self.model.save_weights(average_filename)
 
         import h5py
-        with h5py.File(save_weights_name, mode='r+') as f:
+
+        with h5py.File(save_weights_name, mode="r+") as f:
             f["input_size"] = self.input_size
 
-        #with h5py.File(average_filename, mode='r+') as f:
+        # with h5py.File(average_filename, mode='r+') as f:
         #    f["input_size"] = self.input_size
 
         print("Meta data saved in model.")
-
-
 
     def predict(self, input_path, model_path, good_thresh=0.5):
         """
@@ -511,18 +536,23 @@ class Auto2DSelectNet:
         :return: Return a list of tuples with the format (input_path, index_in_hdf, label, confidence)
         """
         self.load_weights(model_path)
-        img_list = get_list_images(input_path)
+
+        relevant_files = getList_relevant_files(getList_files(input_path))
+
+        files_to_classify = []
+        for file_to_classify in relevant_files:
+            files_to_classify += [(file_to_classify, index) for index in get_key_list_images(file_to_classify)]
+
         results = []
         from tqdm import tqdm
-
-        for img_chunk in tqdm(list(chunks(img_list, self.batch_size))):
-            list_img = getImages_fromList_key(input_path, img_chunk)
+        for img_chunk in tqdm(list(chunks(files_to_classify, self.batch_size))):
+            list_img = getImages_fromList_key(img_chunk)
             result = self.predict_np_list(list_img)
             results.append(result)
 
         result = np.concatenate(tuple(results))
         result_tuples = []
-        for index, index_in_hdf in enumerate(img_list):
+        for index, img_tuble in enumerate(files_to_classify):
             label = 0
             if result[index] > good_thresh:
                 label = 1
@@ -530,7 +560,7 @@ class Auto2DSelectNet:
             confidence = result[index]
             if result[index] <= good_thresh:
                 confidence = 1 - confidence
-            result_tuples.append((input_path, index_in_hdf, label, confidence))
+            result_tuples.append((img_tuble[0], img_tuble[1], label, confidence))
 
         return result_tuples
 
@@ -571,43 +601,63 @@ def get_data_tubles(good_path, bad_path):
     list_bad = list()
     list_good = list()
     for good_p in getList_relevant_files(getList_files(good_path)):
-        list_good += [(good_p, index, 1.0) for index in get_list_images(good_p)]
+        list_good += [(good_p, index, 1.0) for index in get_key_list_images(good_p)]
     for bad_p in getList_relevant_files(getList_files(bad_path)):
-        list_bad += [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
+        list_bad += [(bad_p, index, 0.0) for index in get_key_list_images(bad_p)]
     return list_good + list_bad
 
-def get_train_valid_tubles(good_path, bad_path,thresh=0.9, max_val_img_per_file=-1):
+
+def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file=-1):
     list_bad_train = list()
     list_good_train = list()
     list_bad_valid = list()
     list_good_valid = list()
 
     for good_p in getList_relevant_files(getList_files(good_path)):
-        good_tubles = [(good_p, index, 1.0) for index in get_list_images(good_p)]
-        train_valid_split = int(thresh * len(good_tubles))
-        if max_val_img_per_file > -1:
-            train_valid_split =max(train_valid_split,len(good_tubles)-max_val_img_per_file)
-        np.random.shuffle(good_tubles)
+        good_tubles = [(good_p, index, 1.0) for index in get_key_list_images(good_p)]
+        print("LEN GOOD TUBLES", len(good_tubles))
+        if len(good_tubles)>1:
+            train_valid_split = int(thresh * len(good_tubles))
+            if max_val_img_per_file > -1:
+                train_valid_split = max(
+                    train_valid_split, len(good_tubles) - max_val_img_per_file
+                )
+            np.random.shuffle(good_tubles)
 
-        list_good_train += good_tubles[:train_valid_split]
-        list_good_valid += good_tubles[train_valid_split:]
+            # Do the valid/train split for each file
+            list_good_train += good_tubles[:train_valid_split]
+            list_good_valid += good_tubles[train_valid_split:]
+        else:
+            if np.random.rand() > 0.9:
+                list_good_valid.extend(good_tubles)
+            else:
+                list_good_train.extend(good_tubles)
 
     for bad_p in getList_relevant_files(getList_files(bad_path)):
-        bad_tubles = [(bad_p, index, 0.0) for index in get_list_images(bad_p)]
-        train_valid_split = int(thresh * len(bad_tubles))
-        if max_val_img_per_file > -1:
-            train_valid_split =max(train_valid_split,len(bad_tubles)-max_val_img_per_file)
-        np.random.shuffle(bad_tubles)
+        bad_tubles = [(bad_p, index, 0.0) for index in get_key_list_images(bad_p)]
+        if len(bad_tubles) > 1:
+            train_valid_split = int(thresh * len(bad_tubles))
+            if max_val_img_per_file > -1:
+                train_valid_split = max(
+                    train_valid_split, len(bad_tubles) - max_val_img_per_file
+                )
+            np.random.shuffle(bad_tubles)
 
-        list_bad_train += bad_tubles[:train_valid_split]
-        list_bad_valid += bad_tubles[train_valid_split:]
-    print("GOOD",len(list_good_train),"BAD",len(list_bad_train))
-    
+            list_bad_train += bad_tubles[:train_valid_split]
+            list_bad_valid += bad_tubles[train_valid_split:]
+        else:
+            if np.random.rand() > 0.9:
+                list_bad_valid.extend(bad_tubles)
+            else:
+                list_bad_train.extend(bad_tubles)
+    print("GOOD", len(list_good_train), "BAD", len(list_bad_train))
+
     list_train = list_good_train + list_bad_train
     list_valid = list_good_valid + list_bad_valid
-    weight_good = 1 - float(len(list_good_train))/len(list_train)
-    weight_bad = 1 - float(len(list_bad_train))/len(list_train)
-    return list_train, list_valid, (weight_bad,weight_good)
+    weight_good = 1 - float(len(list_good_train)) / len(list_train)
+    weight_bad = 1 - float(len(list_bad_train)) / len(list_train)
+    return list_train, list_valid, (weight_bad, weight_good)
+
 
 def chunks(list_to_divide, number_of_chunks):
     """Yield successive n-sized chunks from l."""
@@ -636,15 +686,16 @@ def focal_loss(y_true, y_pred):
         [tensor] -- loss.
     """
     import tensorflow as tf
+
     gamma = 2.0
     alpha = 4.0
-    epsilon = 1.e-9
+    epsilon = 1.0e-9
     y_true = tf.convert_to_tensor(y_true, tf.float32)
     y_pred = tf.convert_to_tensor(y_pred, tf.float32)
 
     model_out = tf.add(y_pred, epsilon)
     ce = tf.multiply(y_true, -tf.log(model_out))
-    weight = tf.multiply(y_true, tf.pow(tf.subtract(1., model_out), gamma))
+    weight = tf.multiply(y_true, tf.pow(tf.subtract(1.0, model_out), gamma))
     fl = tf.multiply(alpha, tf.multiply(weight, ce))
     reduced_fl = tf.reduce_max(fl, axis=1)
     return tf.reduce_mean(reduced_fl)
@@ -652,11 +703,13 @@ def focal_loss(y_true, y_pred):
 
 def focal_loss(y_true, y_pred):
     import tensorflow as tf
+
     gamma = 2.0
     alpha = 4.0
-    #epsilon = 1.e-9
-    #y_pred = tf.add(y_pred, epsilon)
+    # epsilon = 1.e-9
+    # y_pred = tf.add(y_pred, epsilon)
     pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
     pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
-    return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1)) - \
-           K.sum(alpha * K.pow(pt_0, gamma) * K.log(1. - pt_0))
+    return -K.sum(alpha * K.pow(1.0 - pt_1, gamma) * K.log(pt_1)) - K.sum(
+        alpha * K.pow(pt_0, gamma) * K.log(1.0 - pt_0)
+    )

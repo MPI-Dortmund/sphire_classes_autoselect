@@ -2,6 +2,8 @@ from setuptools import setup
 import os
 import re
 import codecs
+from Auto2DSelect.SGDRSchedular import SGDRScheduler
+
 # Create new package with python setup.py sdist
 
 here = os.path.abspath(os.path.dirname(__file__))

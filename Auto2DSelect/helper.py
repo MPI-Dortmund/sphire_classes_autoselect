@@ -87,21 +87,23 @@ def getList_relevant_files(path_to_files):
     :param path_to_files: list of all the files present in the folder (and subfolder)given from the user
     :return: list of valid hdf
     """
+
     return [
-        path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file) or path_to_file[-4:]=='mrcs' or path_to_file[-3:] == 'mrc'
+        path_to_file for path_to_file in path_to_files if h5py.is_hdf5(path_to_file) or path_to_file.endswith("mrcs") or path_to_file.endswith("mrc")
     ]
 
 
 """ FUNCTION TO READ THE HDF"""
 
 
-def get_list_images(path_to_file):
+def get_key_list_images(path_to_file):
     """
-    Returns the list of the keys representing the images in the hdf file. It will be converted in list of integer
+    Returns the list of the keys representing the images in the hdf/mrcs file. It will be converted in list of integer
     :param path_to_file:
     :return:
     """
     print("Try to list images on", path_to_file)
+
     if path.isfile(path_to_file):
         if path.basename(path_to_file).split(".")[1] == 'hdf':
             try:
@@ -117,7 +119,7 @@ def get_list_images(path_to_file):
         elif path.basename(path_to_file).split(".")[1] in ['mrcs', 'mrc']:
             try:
                 with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
-                    data = list(range(len(mrc.data)))
+                    data = list(range(mrc.header.nz))
                 return data
             except Exception as e:
                 print(e)
@@ -127,14 +129,68 @@ def get_list_images(path_to_file):
                     + " is not an valid mrc file. It will be ignored"
                 )
 
-
-
-def getImages_fromList_key(path_to_file, list_images):
+def getImages_fromList_key(file_index_tubles):
     """
     Returns the images in the hdf file (path_to_file) listed in (list_images)
     :param path_to_file:    path to hdf file
     :param list_images: list of keys of the DB. It is the output( or part of its) given from 'get_list_images'
-    :return:
+    :return: Returns a list of numpy arrays
+    """
+
+
+    result_data = list()
+    for path_to_file, list_images in file_index_tubles:
+        data = list()
+        if path.isfile(path_to_file):
+            if path.basename(path_to_file).split('.')[1] == "hdf":
+                try:
+                    with h5py.File(path_to_file, driver="core") as f:
+                        if isinstance(list_images, list) or isinstance(list_images, tuple):
+                            data = [
+                                f["MDF"]["images"][str(i)]["image"][()] for i in list_images
+                            ]  # [()] is used instead of .value
+                        elif isinstance(list_images, int):
+                            data = f["MDF"]["images"][str(list_images)]["image"][()]
+                        else:
+                            print(
+                                "\nERROR in getImages_fromList_key: invalid list_images, it should be a string or a list/tuple of strings:",
+                                type(list_images),
+                            )
+                            print("you try to get the following images")
+                            print(list_images)
+                            exit()
+                except Exception as e:
+                    print(e)
+                    print(
+                        "\nERROR in getImages_fromList_key: the file '"
+                        + path_to_file
+                        + " is not an HDF file with the following format:\n\t['MDF']['images']['0']['image']"
+                    )
+                    print("you try to get the following images")
+                    print(list_images)
+                    print("there are " + str(len(f["MDF"]["images"])))
+                    exit()
+            elif path.basename(path_to_file).split('.')[1] in ["mrc", "mrcs"]:
+                data = []
+                with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
+
+                    if isinstance(list_images, int):
+                        list_images = [list_images]
+
+                    if isinstance(list_images, list) or isinstance(list_images, tuple):
+                        if mrc.header.nz > 1:
+                            data = [mrc.data[i] for i in list_images]
+                        elif len(list_images) == 1:
+                            data = [mrc.data]
+        result_data.extend(data)
+    return result_data
+
+def getImages_fromList_key_old(path_to_file, list_images):
+    """
+    Returns the images in the hdf file (path_to_file) listed in (list_images)
+    :param path_to_file:    path to hdf file
+    :param list_images: list of keys of the DB. It is the output( or part of its) given from 'get_list_images'
+    :return: Returns a list of numpy arrays
     """
     data = list()
     if path.isfile(path_to_file):
@@ -169,10 +225,15 @@ def getImages_fromList_key(path_to_file, list_images):
         elif path.basename(path_to_file).split('.')[1] in ["mrc", "mrcs"]:
             data = []
             with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
+
+                if isinstance(list_images, int):
+                    list_images = [list_images]
+
                 if isinstance(list_images, list) or isinstance(list_images, tuple):
-                    data = [mrc.data[i] for i in list_images]
-                elif isinstance(list_images, int):
-                    data = [mrc.data[list_images]]
+                    if mrc.header.nz > 1:
+                        data = [mrc.data[i] for i in list_images]
+                    elif len(list_images) == 1:
+                        data = [mrc.data]
     return data
 
 
