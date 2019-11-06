@@ -83,7 +83,7 @@ def _main_():
             max_valid_img_per_file = config["train"]["max_valid_img_per_file"]
 
     from .auto_2d_select import Auto2DSelectNet
-    auto2dnet = Auto2DSelectNet(batch_size, input_size)
+    auto2dnet = Auto2DSelectNet(batch_size, input_size,depth=1)
 
     auto2dnet.train(
         good_path,

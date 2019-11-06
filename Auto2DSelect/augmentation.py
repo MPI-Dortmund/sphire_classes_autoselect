@@ -39,13 +39,29 @@ class Augmentation:
     def __init__(self, is_grey=False):
         self.is_grey = is_grey
 
+    def augmentation_pipeline(self, image, mandatory_augs, optional_augs, max_optional=6):
+
+        # Run mandatory augmentations
+        image = image.astype(np.float32, copy=False)
+        for aug in mandatory_augs:
+            image = aug(image)
+
+        # Run optional augmentatiojs
+        num_augs = np.random.randint(0, np.minimum(max_optional, len(optional_augs)))
+        if num_augs > 0:
+            selected_augs = random.sample(optional_augs, num_augs)
+            for aug in selected_augs:
+                image = aug(image)
+
+        return image
+
     def image_augmentation(self, image):
         """
         Applies random selection of data augmentations
         :param image:  Input image
         :return: Augmented image
         """
-        augmentations = [
+        optional_augmentations = [
             self.additive_gauss_noise,
             self.add,
             self.contrast_normalization,
@@ -53,13 +69,24 @@ class Augmentation:
             # self.sharpen,
             self.dropout,
         ]
+        r_blurr = np.random.rand()
+        if r_blurr < 0.3:
+            optional_augmentations.append(self.gauss_blur)
+        elif r_blurr < 0.6:
+            optional_augmentations.append(self.avg_blur)
 
+
+        mandatory_augmentations = [self.flip,self.rotate]
+
+        image = self.augmentation_pipeline(image, mandatory_augmentations, optional_augmentations)
+
+        '''
         num_augs = np.random.randint(0, np.minimum(6, len(augmentations)))
         if num_augs > 0:
-
-            if np.random.rand() > 0.5:
+            r_blurr = np.random.rand()
+            if r_blurr < 0.3:
                 augmentations.append(self.gauss_blur)
-            else:
+            elif r_blurr < 0.6:
                 augmentations.append(self.avg_blur)
 
             selected_augs = random.sample(augmentations, num_augs)
@@ -74,9 +101,18 @@ class Augmentation:
                 #    image = np.clip(image, 0, 255)
                 image = image.astype(np.uint8, copy=False)
 
+        image = self.flip_rotation_augmentation(image)
+        '''
+
+        return image
+
+
+    def flip(self,image):
         # Random flip
         image = helper.flip_img(image, random.randint(0, 3))
+        return image
 
+    def rotate(self,image):
         # Random rotation
         rand_rotation = np.random.randint(4)
         image = np.rot90(image, k=rand_rotation)

@@ -53,6 +53,14 @@ def checkfiles(path_to_files):
         return path.isfile(path_to_files)
     return True
 
+def calc_2d_spectra(img):
+    from scipy import fftpack
+    import numpy as np
+    F1 = fftpack.fft2(img)
+    F2 = fftpack.fftshift(F1)
+    psd2D = np.abs(F2) ** 2
+
+    return psd2D
 
 def getList_files(paths):
     """
@@ -149,6 +157,7 @@ def getImages_fromList_key(file_index_tubles):
                             data = [
                                 f["MDF"]["images"][str(i)]["image"][()] for i in list_images
                             ]  # [()] is used instead of .value
+
                         elif isinstance(list_images, int):
                             data = f["MDF"]["images"][str(list_images)]["image"][()]
                         else:
@@ -181,8 +190,8 @@ def getImages_fromList_key(file_index_tubles):
                         if mrc.header.nz > 1:
                             data = [mrc.data[i] for i in list_images]
                         elif len(list_images) == 1:
-                            data = [mrc.data]
-        result_data.extend(data)
+                            data = mrc.data
+        result_data.append(data)
     return result_data
 
 def getImages_fromList_key_old(path_to_file, list_images):
@@ -257,7 +266,13 @@ def normalize_img(img):
     :param img:
     :return:
     """
-    return (img - numpy.mean(img)) / numpy.std(img)
+    import numpy as np
+    #img = img.astype(np.float64, copy=False)
+    mean = numpy.mean(img)
+    std = numpy.std(img)
+    img = (img - mean) / std
+    #img = img.astype(np.float32, copy=False)
+    return img
 
 
 def flip_img(img, t=None):

@@ -35,7 +35,7 @@ def write_labeled_hdf(results, output_path, filename):
     """
     The code will generate 2 files with 'output_path' name and suffix '_good' where it'll storage the good results
                             and '_bad' to storage the bad results
-    :param results: List of results tuples. The tubles have the format (HDF_PATH,index_in_hdf,label,confidence)
+    :param results: List of results tuples. The tubles have the format (image_path,index_in_hdf,label,confidence)
     :param output_path: Path where the results should be written.
     :return: None
     """
@@ -69,7 +69,7 @@ def write_labeled_hdf(results, output_path, filename):
                         subgroup.attrs[k] = v
                     counter += 1
 
-    def write_mrc(original_path, out_path, l):
+    def write_mrcs(original_path, out_path, l):
         """
 
         :param original_path:
@@ -81,25 +81,55 @@ def write_labeled_hdf(results, output_path, filename):
             with mrcfile.mmap(original_path, permissive=True, mode="r") as original_mrc:
                 with mrcfile.new(out_path) as new_mrc:
                     new_mrc.set_data(original_mrc.data[l])
+    def write_mrc(out_path, results):
+        f = open(out_path, "a+")
+        f.write(results[0]+"\n")
+
 
     # the given results belong at one starting file
-    path_original = results[0][0]
-    good_index = [result[1] for result in results if result[2] == 1]
-    bad_index = [result[1] for result in results if result[2] == 0]
+    # Sort results
+    results = sorted(results, key=lambda x: x[0])
 
-    if os.path.basename(path_original).split(".")[1] == "hdf":
-        write_hdf(
-            path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
-        )
-        write_hdf(
-            path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
-        )
-    elif os.path.basename(path_original).split(".")[1] in ["mrc", "mrcs"]:
-        write_mrc(
-            path_original,
-            os.path.join(output_path, filename + "_good.mrcs"),
-            good_index,
-        )
-        write_mrc(
-            path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index
-        )
+    # Group them by filename
+    image_paths = [result[0] for result in results]
+    import itertools
+    running_index = 0
+    for index, (key, group) in enumerate(itertools.groupby(image_paths)):
+        grp = list(group)
+        good_index = []
+        bad_index = []
+        path_original = key
+        for _, _ in enumerate(grp):
+
+            if results[running_index][2]==1:
+                good_index.append(results[running_index][1])
+            else:
+                bad_index.append(results[running_index][1])
+
+            running_index = running_index+1
+            #print("test", )
+            #good_index = [result[1] for result in results[index] if result[2] == 1]
+            #bad_index = [result[1] for result in results[index] if result[2] == 0]
+
+        if os.path.basename(path_original).split(".")[1] == "hdf":
+            write_hdf(
+                path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
+            )
+            write_hdf(
+                path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
+            )
+        elif os.path.basename(path_original).split(".")[1] == "mrcs":
+            write_mrcs(
+                path_original,
+                os.path.join(output_path, filename + "_good.mrcs"),
+                good_index,
+            )
+            write_mrcs(
+                path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index
+            )
+        else:
+            if results[running_index - 1][2]==1:
+                write_mrc(os.path.join(output_path,"good.txt"),results[running_index-1])
+            else:
+                write_mrc(os.path.join(output_path, "bad.txt"), results[running_index - 1])
+

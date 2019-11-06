@@ -61,6 +61,7 @@ from .helper import (
     get_key_list_images,
     getList_relevant_files,
     getList_files,
+    calc_2d_spectra
 )
 from .augmentation import Augmentation
 
@@ -80,6 +81,8 @@ class BatchGenerator(Sequence):
         self.input_image_shape = input_image_shape
         self.do_augmentation = name == "train"
         self.augmenter = Augmentation(is_grey)
+        self.write_psd = False
+        self.do_psd = False
 
     def __len__(self):
         """
@@ -106,6 +109,7 @@ class BatchGenerator(Sequence):
         # Find unique hdf files and read the image
         unique_class_files = {data_tuble[0] for data_tuble in batch_tubles}
         images = []
+        psds = []
         labels = []
         for class_file_path in unique_class_files:
             indicis_for_class_file = [
@@ -127,6 +131,7 @@ class BatchGenerator(Sequence):
             ]  # 2. Downsize images to network input size
 
             images = images + images_from_file
+
             labels = labels + labels_for_class_file
 
 
@@ -137,11 +142,31 @@ class BatchGenerator(Sequence):
                 self.augmenter.image_augmentation(img) for img in images
             ]  # 3. Do data augmentation (+ flip image randomly (X,Y,TH, NONE)) but only for training, not for validation
 
+
+
         images = [
             normalize_img(img) for img in images
         ]  # 4. Normalize images ( subtract mean, divide by standard deviation)
+        if self.do_psd:
+            psds = [calc_2d_spectra(img) for img in images]
+            if self.write_psd:
+                np.savetxt("psd.txt",psds[0])
+            psds = [
+                normalize_img(psd) for psd in psds
+            ]
+            if self.write_psd:
+                from tifffile import imsave
+                imsave('image.tif', images[0])
+                #np.savetxt("image.txt",images[0])
+                np.savetxt("psd_norm.txt",psds[0])
+                self.write_psd=False
+
         images = np.array(images)
-        images = images[:, :, :, np.newaxis]
+        if self.do_psd:
+            images = np.stack((images, psds), axis=3)
+        else:
+            images = images[:, :, :, np.newaxis]
+
         # print(str(idx)+self.name)
         return images, labels
 
@@ -158,7 +183,7 @@ class Auto2DSelectNet:
     Network class for cinderella
     """
 
-    def __init__(self, batch_size, input_size):
+    def __init__(self, batch_size, input_size, depth=1):
         """
 
         :param batch_size: Batch size for training / prediction
@@ -166,18 +191,21 @@ class Auto2DSelectNet:
         """
         self.batch_size = batch_size
         self.input_size = input_size
-        self.model = self.build_phosnet_model()
+        self.model = self.build_phosnet_model(depth)
 
-    def build_phosnet_model(self):
+    def build_phosnet_model(self,depth):
         """
 
         :param input_size: Image input size
         :return: A keras model
         """
-        input_image = Input(shape=(self.input_size[0], self.input_size[1], 1))
+        input_image = Input(shape=(self.input_size[0], self.input_size[1], depth))
 
         # name of first layer
-        name_first_layer = "conv_1_depth1"
+        if depth == 1:
+            name_first_layer = "conv_1_depth1"
+        else:
+            name_first_layer = "bablub"
 
         # Layer 1
         layer_out = Conv2D(
@@ -368,7 +396,7 @@ class Auto2DSelectNet:
         :param model_path: Path to .h5 model file
         :return: None
         """
-        self.model.load_weights(model_path)
+        self.model.load_weights(model_path, by_name=True)
 
     # Define our custom loss function
 
@@ -400,7 +428,7 @@ class Auto2DSelectNet:
 
         if os.path.exists(pretrained_weights):
             print("Load pretrained weights", pretrained_weights)
-            self.model.load_weights(pretrained_weights, by_name=True)
+            self.model.load_weights(pretrained_weights, by_name=True,skip_mismatch=True)
 
         """
         labeled_data = get_data_tubles(good_path, bad_path)
@@ -413,6 +441,7 @@ class Auto2DSelectNet:
         train_data, valid_data, weights = get_train_valid_tubles(
             good_path, bad_path, train_val_thresh, max_valid_img_per_file
         )
+
         train_generator = BatchGenerator(
             labeled_data=train_data,
             name="train",
@@ -506,11 +535,11 @@ class Auto2DSelectNet:
         self.model.fit_generator(
             generator=train_generator,
             validation_data=valid_generator,
-            workers=6,
+            workers=12,
             epochs=nb_epoch,
             callbacks=all_callbacks,
-            max_queue_size=multiprocessing.cpu_count(),
-            use_multiprocessing=True,
+            max_queue_size=multiprocessing.cpu_count()//2,
+            use_multiprocessing=False,
             class_weight=weights,
         )
         # average_filename = "average.h5"
@@ -573,7 +602,7 @@ class Auto2DSelectNet:
         list_img = [images[i] for i in range(images.shape[0])]
         return self.predict_np_list(self, list_img)
 
-    def predict_np_list(self, list_img):
+    def predict_np_list(self, list_img, do_psd=False):
         """
         Run the prediction on list of 2d numpy arrays.
 
@@ -585,6 +614,7 @@ class Auto2DSelectNet:
             for img in list_img
         ]  # 2. Downsize images to network input size
         list_img = [normalize_img(img) for img in list_img]
+
         arr_img = np.array(list_img)
         arr_img = np.expand_dims(arr_img, 3)
         pred_res = self.model.predict(arr_img)
@@ -615,7 +645,6 @@ def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file
 
     for good_p in getList_relevant_files(getList_files(good_path)):
         good_tubles = [(good_p, index, 1.0) for index in get_key_list_images(good_p)]
-        print("LEN GOOD TUBLES", len(good_tubles))
         if len(good_tubles)>1:
             train_valid_split = int(thresh * len(good_tubles))
             if max_val_img_per_file > -1:
@@ -628,7 +657,7 @@ def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file
             list_good_train += good_tubles[:train_valid_split]
             list_good_valid += good_tubles[train_valid_split:]
         else:
-            if np.random.rand() > 0.9:
+            if np.random.rand() > thresh:
                 list_good_valid.extend(good_tubles)
             else:
                 list_good_train.extend(good_tubles)
@@ -646,11 +675,11 @@ def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file
             list_bad_train += bad_tubles[:train_valid_split]
             list_bad_valid += bad_tubles[train_valid_split:]
         else:
-            if np.random.rand() > 0.9:
+            if np.random.rand() > thresh:
                 list_bad_valid.extend(bad_tubles)
             else:
                 list_bad_train.extend(bad_tubles)
-    print("GOOD", len(list_good_train), "BAD", len(list_bad_train))
+    print("CLASS 1", len(list_good_train), "CLASS 0", len(list_bad_train))
 
     list_train = list_good_train + list_bad_train
     list_valid = list_good_valid + list_bad_valid
