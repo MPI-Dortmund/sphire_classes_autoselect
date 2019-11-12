@@ -529,6 +529,7 @@ class Auto2DSelectNet:
         optimizer = Adam(
             lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
+
         self.model.compile(
             optimizer=optimizer, metrics=["accuracy"], loss="binary_crossentropy",
         )
@@ -567,7 +568,7 @@ class Auto2DSelectNet:
         self.load_weights(model_path)
 
         relevant_files = getList_relevant_files(getList_files(input_path))
-
+        print("Relevant files:", len(relevant_files))
         files_to_classify = []
         for file_to_classify in relevant_files:
             files_to_classify += [(file_to_classify, index) for index in get_key_list_images(file_to_classify)]
