@@ -82,6 +82,10 @@ def _main_():
         if config["train"]["max_valid_img_per_file"] is not None:
             max_valid_img_per_file = config["train"]["max_valid_img_per_file"]
 
+    if input_size[0] % 32 > 0 or input_size[1] % 32 > 0:
+        input_size[0] = int(input_size[0]/32)*32
+        input_size[1] = int(input_size[1]/32) * 32
+        print("Input size has to be a multiple of 32. Changed it to:", input_size)
     from .auto_2d_select import Auto2DSelectNet
     auto2dnet = Auto2DSelectNet(batch_size, input_size,depth=1)
 
