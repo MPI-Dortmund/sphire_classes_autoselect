@@ -192,6 +192,7 @@ class Auto2DSelectNet:
         self.batch_size = batch_size
         self.input_size = input_size
         self.model = self.build_phosnet_model(depth)
+        #self.model = self.get_model_unet(input_size=(self.input_size[0],self.input_size[1]))
 
     def build_phosnet_model(self,depth):
         """
@@ -390,6 +391,202 @@ class Auto2DSelectNet:
         model.summary()
         return model
 
+    def get_model_unet(self, input_size=(1024, 1024), kernel_size=(3, 3)):
+        inputs = Input(shape=(input_size[0], input_size[1], 1))
+        skips = [inputs]
+
+        x = Conv2D(
+            name="enc_conv0",
+            filters=48,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(inputs)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = Conv2D(
+            name="enc_conv1",
+            filters=48,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = MaxPooling2D((2, 2))(x)  # --- pool_1
+        skips.append(x)
+
+        x = Conv2D(
+            name="enc_conv2",
+            filters=48,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = MaxPooling2D((2, 2))(x)  # --- pool_2
+        skips.append(x)
+
+        x = Conv2D(
+            name="enc_conv3",
+            filters=48,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = MaxPooling2D((2, 2))(x)  # --- pool_3
+        skips.append(x)
+
+        x = Conv2D(
+            name="enc_conv4",
+            filters=48,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = MaxPooling2D((2, 2))(x)  # --- pool_4
+        skips.append(x)
+
+        x = Conv2D(
+            name="enc_conv5",
+            filters=48,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = MaxPooling2D((2, 2))(x)  # --- pool_5 (not re-used)
+
+        x = Conv2D(
+            name="enc_conv6",
+            filters=48,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = UpSampling2D((2, 2))(x)
+
+        x = concatenate([x, skips.pop()])
+        x = Conv2D(
+            name="dec_conv5",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = Conv2D(
+            name="dec_conv5b",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = UpSampling2D((2, 2))(x)
+
+        x = concatenate([x, skips.pop()])
+
+        x = Conv2D(
+            name="dec_conv4",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = Conv2D(
+            name="dec_conv4b",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = UpSampling2D((2, 2))(x)
+
+        x = concatenate([x, skips.pop()])
+
+        x = Conv2D(
+            name="dec_conv3",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = Conv2D(
+            name="dec_conv3b",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = UpSampling2D((2, 2))(x)
+
+        x = concatenate([x, skips.pop()])
+        x = Conv2D(
+            name="dec_conv2",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = Conv2D(
+            name="dec_conv2b",
+            filters=96,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        x = UpSampling2D((2, 2))(x)
+        x = concatenate([x, skips.pop()])
+
+        x = Conv2D(
+            name="dec_conv1a",
+            filters=64,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = Conv2D(
+            name="dec_conv1b",
+            filters=32,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        x = LeakyReLU(alpha=0.1)(x)
+
+        outputs = Conv2D(
+            filters=1,
+            kernel_size=kernel_size,
+            padding="same",
+            kernel_initializer="he_normal",
+        )(x)
+        feature_extractor = Model(inputs=inputs, outputs=outputs)
+
+        layer_out = GlobalAveragePooling2D()(feature_extractor(inputs))
+
+        output = Dense(64, activation="relu", name="denseL1")(layer_out)
+        # output = Dropout(0.2)(output)
+        output = Dense(10, activation="relu", name="denseL2")(output)
+        # output = Dropout(0.2)(output)
+        output = Dense(1, activation="sigmoid", name="denseL3")(output)
+
+        model = Model(inputs, output)
+        model.summary()
+        return model
+
     def load_weights(self, model_path):
         """
         Load the weights
@@ -571,7 +768,7 @@ class Auto2DSelectNet:
         print("Relevant files:", len(relevant_files))
         files_to_classify = []
         for file_to_classify in relevant_files:
-            files_to_classify += [(file_to_classify, index) for index in get_key_list_images(file_to_classify)]
+            files_to_classify += [(file_to_classify, index) for index in get_key_list_images(file_to_classify) if index != None]
 
         results = []
         from tqdm import tqdm
@@ -611,7 +808,7 @@ class Auto2DSelectNet:
         :return: 1D numpy array with probability of being a good class
         """
         list_img = [
-            resize_img(img, (self.input_size[0], self.input_size[1]))
+            resize_img(get_relevant_slices(img), (self.input_size[0], self.input_size[1]))
             for img in list_img
         ]  # 2. Downsize images to network input size
         list_img = [normalize_img(img) for img in list_img]
@@ -622,6 +819,15 @@ class Auto2DSelectNet:
         result = pred_res[:, 0]
         return result
 
+def get_relevant_slices(img):
+    if len(img.shape) == 2:
+        return img
+    if len(img.shape) == 3:
+        if img.shape[2] == 1:
+            return np.squeeze(img)
+        else:
+            central_slice = int(img.shape[2]/2)
+            return img[:,:,central_slice]
 
 def get_data_tubles(good_path, bad_path):
     """
