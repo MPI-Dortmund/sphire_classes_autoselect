@@ -753,7 +753,7 @@ class Auto2DSelectNet:
 
         print("Meta data saved in model.")
 
-    def predict(self, input_path, model_path, good_thresh=0.5):
+    def predict(self, input_path, model_path, good_thresh=0.5,invert_images=False):
         """
         Runs a trained model on a .hdf file containing 2D classes.
 
@@ -774,7 +774,7 @@ class Auto2DSelectNet:
         from tqdm import tqdm
         for img_chunk in tqdm(list(chunks(files_to_classify, self.batch_size))):
             list_img = getImages_fromList_key(img_chunk)
-            result = self.predict_np_list(list_img)
+            result = self.predict_np_list(list_img, invert_imgs=invert_images)
             results.append(result)
 
         result = np.concatenate(tuple(results))
@@ -800,7 +800,7 @@ class Auto2DSelectNet:
         list_img = [images[i] for i in range(images.shape[0])]
         return self.predict_np_list(self, list_img)
 
-    def predict_np_list(self, list_img, do_psd=False):
+    def predict_np_list(self, list_img, invert_imgs=False):
         """
         Run the prediction on list of 2d numpy arrays.
 
@@ -811,6 +811,11 @@ class Auto2DSelectNet:
             resize_img(get_relevant_slices(img), (self.input_size[0], self.input_size[1]))
             for img in list_img
         ]  # 2. Downsize images to network input size
+
+        if invert_imgs:
+            list_img = [invert(img) for img in list_img]
+
+
         list_img = [normalize_img(img) for img in list_img]
 
         arr_img = np.array(list_img)
@@ -818,6 +823,10 @@ class Auto2DSelectNet:
         pred_res = self.model.predict(arr_img)
         result = pred_res[:, 0]
         return result
+
+def invert(img):
+    img = np.max(img)-img
+    return img
 
 def get_relevant_slices(img):
     if len(img.shape) == 2:
@@ -827,7 +836,7 @@ def get_relevant_slices(img):
             return np.squeeze(img)
         else:
             central_slice = int(img.shape[2]/2)
-            return img[:,:,central_slice]
+            return img[central_slice,:,:]
 
 def get_data_tubles(good_path, bad_path):
     """

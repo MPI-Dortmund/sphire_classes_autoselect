@@ -62,7 +62,11 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument("--gpu", default=-1, type=int, help="GPU to run on.")
 
 ARGPARSER.add_argument("-b","--batch_size", default=32, type=int, help="Number of mini-batches during prediction.")
-
+ARGPARSER.add_argument(
+        "--invertimg",
+        action="store_true",
+        help="inverts the images"
+    )
 
 def _main_():
     args = ARGPARSER.parse_args()
@@ -70,6 +74,8 @@ def _main_():
     weights_path = args.weights
     output_path = args.output
     threshold = args.confidence_threshold
+    invert_images = args.invertimg
+
     if os.path.exists(output_path):
         print("Output path already exists. Stop")
         exit(0)
@@ -92,7 +98,7 @@ def _main_():
     batch_size = args.batch_size
     from .auto_2d_select import Auto2DSelectNet
     auto2dnet = Auto2DSelectNet(batch_size, input_size)
-    result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold)
+    result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold,invert_images=invert_images)
 
 
     results_writer.write_labeled_hdf(
