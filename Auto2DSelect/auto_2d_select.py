@@ -639,6 +639,8 @@ class Auto2DSelectNet:
             good_path, bad_path, train_val_thresh, max_valid_img_per_file
         )
 
+
+
         train_generator = BatchGenerator(
             labeled_data=train_data,
             name="train",

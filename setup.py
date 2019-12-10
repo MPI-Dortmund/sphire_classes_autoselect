@@ -2,7 +2,6 @@ from setuptools import setup
 import os
 import re
 import codecs
-from Auto2DSelect.SGDRSchedular import SGDRScheduler
 
 # Create new package with python setup.py sdist
 
@@ -45,5 +44,7 @@ setup(
     entry_points={
         'console_scripts': [
             'sp_cinderella_train.py = Auto2DSelect.train:_main_',
-            'sp_cinderella_predict.py = Auto2DSelect.predict:_main_']},
+            'sp_cinderella_predict.py = Auto2DSelect.predict:_main_',
+            #'sp_cinderella_extract.py = Auto2DSelect.extract:_main_',
+        ]},
 )

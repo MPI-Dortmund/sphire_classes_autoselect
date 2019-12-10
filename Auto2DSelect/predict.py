@@ -117,8 +117,8 @@ def _main_():
 
     fraction_good = int(100*(len(good) / (len(good)+len(bad))))
     fraction_bad = int(100 * (len(bad) / (len(good) + len(bad))))
-    print("\n Good classes: ", len(good), "/", len(good)+len(bad),"(",fraction_good,"% )",  "\n")
-    print("\n Bad classes: ", len(bad), "/", len(good)+len(bad),"(",fraction_bad,"% )",  "\n")
+    print("\n Good: ", len(good), "/", len(good)+len(bad),"(",fraction_good,"% )",  "\n")
+    print("\n Bad: ", len(bad), "/", len(good)+len(bad),"(",fraction_bad,"% )",  "\n")
 
 
 if __name__ == "__main__":

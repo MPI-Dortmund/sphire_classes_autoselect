@@ -67,8 +67,8 @@ def _main_():
 
     input_size = config["model"]["input_size"]
     batch_size = config["train"]["batch_size"]
-    good_path = config["train"]["good_classes"]
-    bad_path = config["train"]["bad_classes"]
+    good_path = config["train"]["good_path"]
+    bad_path = config["train"]["bad_path"]
     pretrained_weights = config["train"]["pretrained_weights"]
     output_file = config["train"]["saved_weights_name"]
     nb_epoch = config["train"]["nb_epoch"]

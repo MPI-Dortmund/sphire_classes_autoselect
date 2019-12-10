@@ -81,7 +81,7 @@ def write_labeled_hdf(results, output_path, filename):
             with mrcfile.mmap(original_path, permissive=True, mode="r") as original_mrc:
                 with mrcfile.new(out_path) as new_mrc:
                     new_mrc.set_data(original_mrc.data[l])
-    def write_mrc(out_path, results):
+    def write_line(out_path, results):
         f = open(out_path, "a+")
         f.write(results[0]+"\n")
 
@@ -107,9 +107,6 @@ def write_labeled_hdf(results, output_path, filename):
                 bad_index.append(results[running_index][1])
 
             running_index = running_index+1
-            #print("test", )
-            #good_index = [result[1] for result in results[index] if result[2] == 1]
-            #bad_index = [result[1] for result in results[index] if result[2] == 0]
 
         if os.path.basename(path_original).split(".")[1] == "hdf":
             write_hdf(
@@ -127,9 +124,10 @@ def write_labeled_hdf(results, output_path, filename):
             write_mrcs(
                 path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index
             )
+
+        # Write indices
+        if results[running_index - 1][2]==1:
+            write_line(os.path.join(output_path,"good.txt"),results[running_index-1])
         else:
-            if results[running_index - 1][2]==1:
-                write_mrc(os.path.join(output_path,"good.txt"),results[running_index-1])
-            else:
-                write_mrc(os.path.join(output_path, "bad.txt"), results[running_index - 1])
+            write_line(os.path.join(output_path, "bad.txt"), results[running_index - 1])
 
