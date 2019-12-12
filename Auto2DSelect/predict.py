@@ -101,7 +101,7 @@ def _main_():
     result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold,invert_images=invert_images)
 
 
-    results_writer.write_labeled_hdf(
+    results_writer.write_results_to_disk(
         result, output_path, os.path.basename(input_path).split(".")[0]
     )
 

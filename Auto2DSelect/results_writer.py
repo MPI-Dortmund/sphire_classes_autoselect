@@ -31,7 +31,7 @@ import mrcfile
 
 # pylint: disable=C0330, C0301
 
-def write_labeled_hdf(results, output_path, filename):
+def write_results_to_disk(results, output_path, filename):
     """
     The code will generate 2 files with 'output_path' name and suffix '_good' where it'll storage the good results
                             and '_bad' to storage the bad results
@@ -81,9 +81,9 @@ def write_labeled_hdf(results, output_path, filename):
             with mrcfile.mmap(original_path, permissive=True, mode="r") as original_mrc:
                 with mrcfile.new(out_path) as new_mrc:
                     new_mrc.set_data(original_mrc.data[l])
-    def write_line(out_path, results):
+    def write_line(out_path, line):
         f = open(out_path, "a+")
-        f.write(results[0]+"\n")
+        f.write(line+"\n")
 
 
     # the given results belong at one starting file
@@ -98,23 +98,34 @@ def write_labeled_hdf(results, output_path, filename):
         grp = list(group)
         good_index = []
         bad_index = []
+        bad_confidence = []
+        good_confidence = []
         path_original = key
         for _, _ in enumerate(grp):
 
             if results[running_index][2]==1:
                 good_index.append(results[running_index][1])
+                good_confidence.append(results[running_index][3])
             else:
                 bad_index.append(results[running_index][1])
+                bad_confidence.append(results[running_index][3])
 
             running_index = running_index+1
 
+
+        '''
+        In case of classes, write new classes
+        '''
         if os.path.basename(path_original).split(".")[1] == "hdf":
+
             write_hdf(
                 path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
             )
+
             write_hdf(
                 path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
             )
+
         elif os.path.basename(path_original).split(".")[1] == "mrcs":
             write_mrcs(
                 path_original,
@@ -125,9 +136,28 @@ def write_labeled_hdf(results, output_path, filename):
                 path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index
             )
 
-        # Write indices
-        if results[running_index - 1][2]==1:
-            write_line(os.path.join(output_path,"good.txt"),results[running_index-1])
-        else:
-            write_line(os.path.join(output_path, "bad.txt"), results[running_index - 1])
+        '''
+        In case of classes, write a index_confidence file
+        '''
+        if os.path.basename(path_original).split(".")[1]  == "mrcs" or os.path.basename(path_original).split(".")[1]  == "hdf":
+            for k,ingood in enumerate(good_index):
+                write_line(os.path.join(output_path, "index_confidence.txt"), str(ingood) + " " + "{0:.3f}".format(good_confidence[k]))
+            for k, inbad in enumerate(bad_index):
+                write_line(os.path.join(output_path, "index_confidence.txt"),
+                           str(inbad) + "," + "{0:.3f}".format(1-bad_confidence[k]))
+
+        '''
+        In case of micrographs, write a good.txt and bad.txt with respective filenames.
+        Moreover write a filename_confidence file
+        '''
+        if os.path.basename(path_original).split(".")[1] == "mrc" or os.path.basename(path_original).split(".")[1] == "tiff":
+            conf = 0
+            if results[running_index - 1][2]==1:
+                write_line(os.path.join(output_path,"good.txt"),results[running_index-1][0])
+                conf = results[running_index-1][3]
+            else:
+                write_line(os.path.join(output_path, "bad.txt"), results[running_index - 1][0])
+                conf = 1-results[running_index - 1][3]
+
+            write_line(os.path.join(output_path, "filename_confidence.txt"), results[running_index - 1][0] + " " + "{0:.3f}".format(conf))
 
