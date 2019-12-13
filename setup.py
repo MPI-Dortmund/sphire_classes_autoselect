@@ -45,6 +45,6 @@ setup(
         'console_scripts': [
             'sp_cinderella_train.py = Auto2DSelect.train:_main_',
             'sp_cinderella_predict.py = Auto2DSelect.predict:_main_',
-            #'sp_cinderella_extract.py = Auto2DSelect.extract:_main_',
+            'sp_cinderella_extract.py = Auto2DSelect.extract:_main_',
         ]},
 )

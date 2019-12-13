@@ -157,14 +157,14 @@ def getImages_fromList_key(file_index_tubles):
     :param list_images: list of keys of the DB. It is the output( or part of its) given from 'get_list_images'
     :return: Returns a list of numpy arrays
     """
-
+# driver="core"
     result_data = list()
     for path_to_file, list_images in file_index_tubles:
         data = list()
         if path.isfile(path_to_file):
             if path.basename(path_to_file).split(".")[1] == "hdf":
                 try:
-                    with h5py.File(path_to_file, driver="core") as f:
+                    with h5py.File(path_to_file) as f:
                         if isinstance(list_images, list) or isinstance(
                             list_images, tuple
                         ):
