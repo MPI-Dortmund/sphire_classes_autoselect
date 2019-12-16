@@ -24,7 +24,7 @@ def _main_():
 
     input_file = args.input
     output_file = args.output
-    doinvert = True
+    doinvert = args.invertimg
     print("Read images")
     key_img_list = get_key_list_images(input_file)
     data_tubles = [(input_file,i) for i in key_img_list]
