@@ -102,7 +102,7 @@ def _main_():
 
 
     results_writer.write_results_to_disk(
-        result, output_path, os.path.basename(input_path).split(".")[0]
+        result, output_path
     )
 
     good = []

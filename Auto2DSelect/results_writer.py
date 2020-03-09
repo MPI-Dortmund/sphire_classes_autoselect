@@ -31,7 +31,7 @@ import mrcfile
 
 # pylint: disable=C0330, C0301
 
-def write_results_to_disk(results, output_path, filename):
+def write_results_to_disk(results, output_path):
     """
     The code will generate 2 files with 'output_path' name and suffix '_good' where it'll storage the good results
                             and '_bad' to storage the bad results

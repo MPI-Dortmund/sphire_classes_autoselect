@@ -168,6 +168,14 @@ class BatchGenerator(Sequence):
             images = images[:, :, :, np.newaxis]
 
         # print(str(idx)+self.name)
+        '''
+        weights=[]
+        for l in labels:
+            if l == 0:
+                weights.append(self.weight_0)
+            elif l == 1:
+                weights.append(self.weight_1)
+        '''
         return images, labels
 
     def on_epoch_end(self):
@@ -639,8 +647,6 @@ class Auto2DSelectNet:
             good_path, bad_path, train_val_thresh, max_valid_img_per_file
         )
 
-
-
         train_generator = BatchGenerator(
             labeled_data=train_data,
             name="train",
@@ -675,6 +681,15 @@ class Auto2DSelectNet:
             verbose=1,
         )
         all_callbacks.append(early_stop)
+
+        reduceLROnPlateau = ReduceLROnPlateau(
+            monitor="val_loss",
+            factor=0.1,
+            patience=int(nb_epoch_early * 0.6),
+            verbose=1,
+        )
+        all_callbacks.append(reduceLROnPlateau)
+
         try:
             os.makedirs(os.path.expanduser("logs/"))
         except:
@@ -729,8 +744,11 @@ class Auto2DSelectNet:
             lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
 
+        weights = {1: weights[1], 0: weights[0]}
+        #weights = {1: 1, 0: 1}
+        print("Weights", weights)
         self.model.compile(
-            optimizer=optimizer, metrics=["accuracy"], loss="binary_crossentropy",
+            optimizer=optimizer, metrics=["binary_accuracy"], loss="binary_crossentropy"
         )
         self.model.fit_generator(
             generator=train_generator,
@@ -790,7 +808,6 @@ class Auto2DSelectNet:
             if result[index] <= good_thresh:
                 confidence = 1 - confidence
             result_tuples.append((img_tuble[0], img_tuble[1], label, confidence))
-
         return result_tuples
 
     def predict_np_arr(self, images):
@@ -897,12 +914,19 @@ def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file
                 list_bad_valid.extend(bad_tubles)
             else:
                 list_bad_train.extend(bad_tubles)
-    print("CLASS 1", len(list_good_train), "CLASS 0", len(list_bad_train))
+    print("CLASS 1", len(list_good_train),"(+",len(list_good_valid)," val. img)", "CLASS 0", len(list_bad_train),"(+",len(list_bad_valid),"val img.)")
 
     list_train = list_good_train + list_bad_train
     list_valid = list_good_valid + list_bad_valid
     weight_good = 1 - float(len(list_good_train)) / len(list_train)
     weight_bad = 1 - float(len(list_bad_train)) / len(list_train)
+    if len(list_good_train) > len(list_bad_train):
+        weight_good = 1
+        weight_bad = len(list_good_train)/len(list_bad_train)
+    else:
+        weight_good = len(list_bad_train) / len(list_good_train)
+        weight_bad = 1
+    print("Class weight 1:", weight_good, "Class weight 0:", weight_bad)
     return list_train, list_valid, (weight_bad, weight_good)
 
 
