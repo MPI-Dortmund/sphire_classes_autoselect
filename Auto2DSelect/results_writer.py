@@ -144,7 +144,7 @@ def write_results_to_disk(results, output_path, filename):
                 write_line(os.path.join(output_path, "index_confidence.txt"), str(ingood) + " " + "{0:.3f}".format(good_confidence[k]))
             for k, inbad in enumerate(bad_index):
                 write_line(os.path.join(output_path, "index_confidence.txt"),
-                           str(inbad) + "," + "{0:.3f}".format(1-bad_confidence[k]))
+                           str(inbad) + " " + "{0:.3f}".format(1-bad_confidence[k]))
 
         '''
         In case of micrographs, write a good.txt and bad.txt with respective filenames.
