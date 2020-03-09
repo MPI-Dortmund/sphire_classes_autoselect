@@ -35,11 +35,10 @@ def write_results_to_disk(results, output_path, filename):
     """
     The code will generate 2 files with 'output_path' name and suffix '_good' where it'll storage the good results
                             and '_bad' to storage the bad results
-    :param results: List of results tuples. The tubles have the format (image_path,index_in_hdf,label,confidence)
+    :param results: List of results tuples. The tubles have the format (image_path,index_in_hdf_or_mrc,label,confidence)
     :param output_path: Path where the results should be written.
     :return: None
     """
-
     def write_hdf(original_path, out_path, image_indices):
         """
         It copies the image from the original file to the result files.
@@ -116,8 +115,9 @@ def write_results_to_disk(results, output_path, filename):
         '''
         In case of classes, write new classes
         '''
-        if os.path.basename(path_original).split(".")[1] == "hdf":
-
+        filename_ext = os.path.basename(path_original).split(".")[1]
+        filename = os.path.basename(path_original).split(".")[0]
+        if filename_ext == "hdf":
             write_hdf(
                 path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
             )
@@ -126,7 +126,8 @@ def write_results_to_disk(results, output_path, filename):
                 path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
             )
 
-        elif os.path.basename(path_original).split(".")[1] == "mrcs":
+        elif filename_ext == "mrcs":
+
             write_mrcs(
                 path_original,
                 os.path.join(output_path, filename + "_good.mrcs"),
@@ -139,11 +140,11 @@ def write_results_to_disk(results, output_path, filename):
         '''
         In case of classes, write a index_confidence file
         '''
-        if os.path.basename(path_original).split(".")[1]  == "mrcs" or os.path.basename(path_original).split(".")[1]  == "hdf":
+        if filename_ext  == "mrcs" or filename_ext  == "hdf":
             for k,ingood in enumerate(good_index):
-                write_line(os.path.join(output_path, "index_confidence.txt"), str(ingood) + " " + "{0:.3f}".format(good_confidence[k]))
+                write_line(os.path.join(output_path, filename+"_index_confidence.txt"), str(ingood) + " " + "{0:.3f}".format(good_confidence[k]))
             for k, inbad in enumerate(bad_index):
-                write_line(os.path.join(output_path, "index_confidence.txt"),
+                write_line(os.path.join(output_path, filename+"_index_confidence.txt"),
                            str(inbad) + " " + "{0:.3f}".format(1-bad_confidence[k]))
 
         '''
