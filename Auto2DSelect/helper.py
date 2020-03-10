@@ -168,10 +168,12 @@ def getImages_fromList_key(file_index_tubles):
                         if isinstance(list_images, list) or isinstance(
                             list_images, tuple
                         ):
+
                             data = [
                                 f["MDF"]["images"][str(i)]["image"][()]
                                 for i in list_images
                             ]  # [()] is used instead of .value
+                            print("LIST!!!", type(data))
 
                         elif isinstance(list_images, int):
                             data = f["MDF"]["images"][str(list_images)]["image"][()]
@@ -203,10 +205,17 @@ def getImages_fromList_key(file_index_tubles):
 
                     if isinstance(list_images, list) or isinstance(list_images, tuple):
                         if mrc.header.nz > 1:
-                            data = [mrc.data[i] for i in list_images]
+                            if len(list_images)==1:
+                                data = mrc.data[list_images[0]]
+                            else:
+                                data = [mrc.data[i] for i in list_images]
                         elif len(list_images) == 1:
                             data = mrc.data
+
         result_data.append(data)
+
+
+
     return result_data
 
 
