@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-'''
+"""
 Automatic 2D class selection tool.
 
 MIT License
@@ -24,13 +24,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-'''
+"""
 
 import multiprocessing
 import argparse
 import os
 import json
-
 
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -74,31 +73,49 @@ def _main_():
     nb_epoch = config["train"]["nb_epoch"]
     nb_epoch_early_stop = config["train"]["nb_early_stop"]
     learning_rate = config["train"]["learning_rate"]
-    train_valid_thresh = 0.8
-    if "train_valid_thresh" in config["train"]:
-        train_valid_thresh = config["train"]["train_valid_thresh"]
+
+    valid_good_path = None
+    valid_bad_path = None
+    if (
+        "valid" in config
+        and "good_path" in config["valid"]
+        and "bad_path" in config["valid"]
+        and config["valid"]["good_path"]
+        and config["valid"]["bad_path"]
+    ):
+        valid_good_path = config["valid"]["good_path"]
+        valid_bad_path = config["valid"]["bad_path"]
+
+    if "train_valid_split" in config["train"]:
+        train_valid_thresh = config["train"]["train_valid_split"]
+    else:
+        train_valid_thresh = 0.8
+
     max_valid_img_per_file = -1
     if "max_valid_img_per_file" in config["train"]:
         if config["train"]["max_valid_img_per_file"] is not None:
             max_valid_img_per_file = config["train"]["max_valid_img_per_file"]
 
     if input_size[0] % 32 > 0 or input_size[1] % 32 > 0:
-        input_size[0] = int(input_size[0]/32)*32
-        input_size[1] = int(input_size[1]/32) * 32
+        input_size[0] = int(input_size[0] / 32) * 32
+        input_size[1] = int(input_size[1] / 32) * 32
         print("Input size has to be a multiple of 32. Changed it to:", input_size)
     from .auto_2d_select import Auto2DSelectNet
-    auto2dnet = Auto2DSelectNet(batch_size, input_size,depth=1)
+
+    auto2dnet = Auto2DSelectNet(batch_size, input_size, depth=1)
 
     auto2dnet.train(
-        good_path,
-        bad_path,
+        train_good_path=good_path,
+        train_bad_path=bad_path,
         save_weights_name=output_file,
         pretrained_weights=pretrained_weights,
         nb_epoch=nb_epoch,
         nb_epoch_early=nb_epoch_early_stop,
         learning_rate=learning_rate,
         train_val_thresh=train_valid_thresh,
-        max_valid_img_per_file=max_valid_img_per_file
+        max_valid_img_per_file=max_valid_img_per_file,
+        valid_good_path=valid_good_path,
+        valid_bad_path=valid_bad_path,
     )
 
 

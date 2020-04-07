@@ -607,8 +607,8 @@ class Auto2DSelectNet:
 
     def train(
         self,
-        good_path,
-        bad_path,
+        train_good_path,
+        train_bad_path,
         save_weights_name,
         learning_rate=10 ** -4,
         nb_epoch=50,
@@ -618,12 +618,14 @@ class Auto2DSelectNet:
         train_val_thresh=0.8,
         max_valid_img_per_file=10,
         warmrestarts=True,
+        valid_good_path=None,
+        valid_bad_path=None
     ):
         """
         Train the network on 2D classes.
 
-        :param good_path: Path to folder with good classes
-        :param bad_path: Path to folder with bad classes
+        :param train_good_path: Path to folder with good classes
+        :param train_bad_path: Path to folder with bad classes
         :param save_weights_name: Filename of the modle file
         :param pretrained_weights: Filepath to pretrained weights
         :param seed: Seed for random number selection
@@ -643,9 +645,17 @@ class Auto2DSelectNet:
         train_data = labeled_data[:train_valid_split]
         valid_data = labeled_data[train_valid_split:]
         """
-        train_data, valid_data, weights = get_train_valid_tubles(
-            good_path, bad_path, train_val_thresh, max_valid_img_per_file
-        )
+        if valid_good_path is None and valid_bad_path is None:
+            train_data, valid_data, weights = get_train_valid_tubles(
+                train_good_path, train_bad_path, train_val_thresh, max_valid_img_per_file
+            )
+        else:
+            train_data, _, weights = get_train_valid_tubles(
+                train_good_path, train_bad_path, 1.0
+            )
+            _, valid_data, _ = get_train_valid_tubles(
+                valid_good_path, valid_bad_path, 0.0
+            )
 
         train_generator = BatchGenerator(
             labeled_data=train_data,
@@ -918,15 +928,19 @@ def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file
 
     list_train = list_good_train + list_bad_train
     list_valid = list_good_valid + list_bad_valid
-    weight_good = 1 - float(len(list_good_train)) / len(list_train)
-    weight_bad = 1 - float(len(list_bad_train)) / len(list_train)
-    if len(list_good_train) > len(list_bad_train):
-        weight_good = 1
-        weight_bad = len(list_good_train)/len(list_bad_train)
-    else:
-        weight_good = len(list_bad_train) / len(list_good_train)
-        weight_bad = 1
-    print("Class weight 1:", weight_good, "Class weight 0:", weight_bad)
+    weight_good=0
+    weight_bad=0
+    if len(list_train)>0:
+        weight_good = 1 - float(len(list_good_train)) / len(list_train)
+        weight_bad = 1 - float(len(list_bad_train)) / len(list_train)
+        if len(list_good_train) > len(list_bad_train):
+            weight_good = 1
+            weight_bad = len(list_good_train)/len(list_bad_train)
+        else:
+            weight_good = len(list_bad_train) / len(list_good_train)
+            weight_bad = 1
+
+        print("Class weight 1:", weight_good, "Class weight 0:", weight_bad)
     return list_train, list_valid, (weight_bad, weight_good)
 
 

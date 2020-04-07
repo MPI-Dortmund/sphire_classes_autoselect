@@ -68,6 +68,12 @@ ARGPARSER.add_argument(
         help="inverts the images"
     )
 
+ARGPARSER.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrites an existing directory"
+    )
+
 def _main_():
     args = ARGPARSER.parse_args()
     input_path = args.input
@@ -75,10 +81,12 @@ def _main_():
     output_path = args.output
     threshold = args.confidence_threshold
     invert_images = args.invertimg
+    overwrite = args.overwrite
 
     if os.path.exists(output_path):
-        print("Output path already exists. Stop")
-        exit(0)
+        if not overwrite:
+            print("Output path already exists. Stop")
+            exit(0)
     else:
         os.makedirs(output_path)
 
