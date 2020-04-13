@@ -116,6 +116,8 @@ def _main_():
         max_valid_img_per_file=max_valid_img_per_file,
         valid_good_path=valid_good_path,
         valid_bad_path=valid_bad_path,
+        apply_ciruclar_mask=True,
+        full_rotation_aug=True
     )
 
 

@@ -35,6 +35,7 @@ setup(
         "Keras == 2.2.5",
         "numpy == 1.14.5",
         "h5py >= 2.5.0",
+        "scipy >= 1.3.0"
         "pillow",
         "tqdm",
         "mrcfile"

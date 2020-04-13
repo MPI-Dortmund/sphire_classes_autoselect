@@ -28,7 +28,7 @@ SOFTWARE.
 from os import path, listdir
 import h5py
 from PIL import Image  # install it via pip install pillow
-import numpy
+import numpy as np
 import mrcfile
 
 """
@@ -38,6 +38,19 @@ hence to get the images number 5:
     ['MDF']['images']['5']['image'][()]
 """
 
+
+def create_circular_mask(h, w, center=None, radius=None):
+
+    if center is None:  # use the middle of the image
+        center = (int(w / 2), int(h / 2))
+    if radius is None:  # use the smallest distance between the center and image walls
+        radius = min(center[0], center[1], w - center[0], h - center[1])
+
+    Y, X = np.ogrid[:h, :w]
+    dist_from_center = np.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2)
+
+    mask = dist_from_center <= radius
+    return mask
 
 def checkfiles(path_to_files):
     """
@@ -274,6 +287,12 @@ def getImages_fromList_key_old(path_to_file, list_images):
 """ FUNCTION TO MANIPULATE THE IMAGES"""
 
 
+def apply_mask(img, mask):
+    mean = np.mean(img)
+    img[mask==False]=mean
+    return img
+
+
 def resize_img(img, resize=(76, 76)):
     """
     Resize the given image into the given size
@@ -282,7 +301,7 @@ def resize_img(img, resize=(76, 76)):
     :return: return the resized img
     """
     im = Image.fromarray(img)
-    return numpy.array(im.resize(resize, resample=Image.BILINEAR))
+    return np.array(im.resize(resize, resample=Image.BILINEAR))
 
 
 def normalize_img(img):
@@ -294,8 +313,8 @@ def normalize_img(img):
     import numpy as np
 
     # img = img.astype(np.float64, copy=False)
-    mean = numpy.mean(img)
-    std = numpy.std(img)
+    mean = np.mean(img)
+    std = np.std(img)
     img = (img - mean) / std
     # img = img.astype(np.float32, copy=False)
     return img
@@ -313,9 +332,9 @@ def flip_img(img, t=None):
     :return:
     """
     if t == 1:
-        return numpy.flipud(img)
+        return np.flipud(img)
     elif t == 2:
-        return numpy.fliplr(img)
+        return np.fliplr(img)
     elif t == 3:
-        return numpy.flipud(numpy.fliplr(img))
+        return np.flipud(np.fliplr(img))
     return img

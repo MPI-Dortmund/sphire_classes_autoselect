@@ -31,6 +31,7 @@ import argparse
 import os
 from . import results_writer
 import h5py
+from .helper import create_circular_mask
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 try:
@@ -105,7 +106,8 @@ def _main_():
 
     batch_size = args.batch_size
     from .auto_2d_select import Auto2DSelectNet
-    auto2dnet = Auto2DSelectNet(batch_size, input_size)
+    mask = create_circular_mask(input_size[0],input_size[1])
+    auto2dnet = Auto2DSelectNet(batch_size, input_size, mask=mask)
     result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold,invert_images=invert_images)
 
 

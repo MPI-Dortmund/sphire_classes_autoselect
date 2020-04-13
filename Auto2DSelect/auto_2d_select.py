@@ -58,6 +58,7 @@ from .helper import (
     getImages_fromList_key,
     resize_img,
     normalize_img,
+    apply_mask,
     get_key_list_images,
     getList_relevant_files,
     getList_files,
@@ -73,16 +74,17 @@ class BatchGenerator(Sequence):
     """
 
     def __init__(
-        self, labeled_data, name, batch_size, input_image_shape, is_grey=False
+        self, labeled_data, name, batch_size, input_image_shape, is_grey=False, mask=None, full_rotation_aug=False
     ):
         self.labeled_data = labeled_data
         self.name = name
         self.batch_size = batch_size
         self.input_image_shape = input_image_shape
         self.do_augmentation = name == "train"
-        self.augmenter = Augmentation(is_grey)
+        self.augmenter = Augmentation(is_grey,full_rotation=full_rotation_aug)
         self.write_psd = False
         self.do_psd = False
+        self.mask = mask
 
     def __len__(self):
         """
@@ -147,6 +149,12 @@ class BatchGenerator(Sequence):
         images = [
             normalize_img(img) for img in images
         ]  # 4. Normalize images ( subtract mean, divide by standard deviation)
+
+        if self.mask is not None:
+            images = [
+                apply_mask(img,self.mask) for img in images
+            ]
+
         if self.do_psd:
             psds = [calc_2d_spectra(img) for img in images]
             if self.write_psd:
@@ -191,7 +199,7 @@ class Auto2DSelectNet:
     Network class for cinderella
     """
 
-    def __init__(self, batch_size, input_size, depth=1):
+    def __init__(self, batch_size, input_size, depth=1, mask=None):
         """
 
         :param batch_size: Batch size for training / prediction
@@ -200,6 +208,7 @@ class Auto2DSelectNet:
         self.batch_size = batch_size
         self.input_size = input_size
         self.model = self.build_phosnet_model(depth)
+        self.mask = mask
         #self.model = self.get_model_unet(input_size=(self.input_size[0],self.input_size[1]))
 
     def build_phosnet_model(self,depth):
@@ -619,7 +628,9 @@ class Auto2DSelectNet:
         max_valid_img_per_file=10,
         warmrestarts=True,
         valid_good_path=None,
-        valid_bad_path=None
+        valid_bad_path=None,
+        mask=None,
+        full_rotation_aug=False
     ):
         """
         Train the network on 2D classes.
@@ -662,12 +673,15 @@ class Auto2DSelectNet:
             name="train",
             batch_size=self.batch_size,
             input_image_shape=self.input_size,
+            mask=mask,
+            full_rotation_aug=full_rotation_aug
         )
         valid_generator = BatchGenerator(
             labeled_data=valid_data,
             name="valid",
             batch_size=self.batch_size,
             input_image_shape=self.input_size,
+            mask=mask
         )
 
         # Define callbacks
@@ -804,7 +818,7 @@ class Auto2DSelectNet:
         from tqdm import tqdm
         for img_chunk in tqdm(list(chunks(files_to_classify, self.batch_size))):
             list_img = getImages_fromList_key(img_chunk)
-            result = self.predict_np_list(list_img, invert_imgs=invert_images)
+            result = self.predict_np_list(list_img, invert_imgs=invert_images,mask=self.mask)
             results.append(result)
 
         result = np.concatenate(tuple(results))
@@ -829,7 +843,7 @@ class Auto2DSelectNet:
         list_img = [images[i] for i in range(images.shape[0])]
         return self.predict_np_list(self, list_img)
 
-    def predict_np_list(self, list_img, invert_imgs=False):
+    def predict_np_list(self, list_img, invert_imgs=False, mask=None):
         """
         Run the prediction on list of 2d numpy arrays.
 
@@ -846,6 +860,9 @@ class Auto2DSelectNet:
 
 
         list_img = [normalize_img(img) for img in list_img]
+
+        if mask is not None:
+            list_img = [apply_mask(img,mask) for img in list_img]
 
         arr_img = np.array(list_img)
         arr_img = np.expand_dims(arr_img, 3)

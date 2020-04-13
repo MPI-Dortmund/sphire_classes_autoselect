@@ -36,8 +36,9 @@ class Augmentation:
     Class for doing data augmentation
     """
 
-    def __init__(self, is_grey=False):
+    def __init__(self, is_grey=False, full_rotation=False):
         self.is_grey = is_grey
+        self.full_rotation = full_rotation
 
     def augmentation_pipeline(self, image, mandatory_augs, optional_augs, max_optional=6):
 
@@ -62,12 +63,12 @@ class Augmentation:
         :return: Augmented image
         """
         optional_augmentations = [
-            self.additive_gauss_noise,
             self.add,
             self.contrast_normalization,
             self.multiply,
-            # self.sharpen,
             self.dropout,
+            self.additive_gauss_noise
+            # self.sharpen,
         ]
         r_blurr = np.random.rand()
         if r_blurr < 0.3:
@@ -76,7 +77,11 @@ class Augmentation:
             optional_augmentations.append(self.avg_blur)
 
 
-        mandatory_augmentations = [self.flip,self.rotate]
+        mandatory_augmentations = [self.flip]
+        if self.full_rotation:
+            mandatory_augmentations.append(self.rotate)
+        else:
+            mandatory_augmentations.append(self.rotate90)
 
         image = self.augmentation_pipeline(image, mandatory_augmentations, optional_augmentations)
 
@@ -113,6 +118,12 @@ class Augmentation:
         return image
 
     def rotate(self,image):
+        rand_degree = np.random.randint(0,360)
+        mean = np.mean(image)
+        image = ndimage.rotate(image,rand_degree,cval=mean,reshape=False)
+        return image
+
+    def rotate90(self, image):
         # Random rotation
         rand_rotation = np.random.randint(4)
         image = np.rot90(image, k=rand_rotation)
@@ -185,7 +196,7 @@ class Augmentation:
 
         return image
 
-    def dropout(self, image, ratio=(0.01, 0.1)):
+    def dropout(self, image, ratio=(0.01, 0.3)): # 0.01 0.1
         """
         Set a random selection of pixels to the mean of the image
         :param image: Input image
