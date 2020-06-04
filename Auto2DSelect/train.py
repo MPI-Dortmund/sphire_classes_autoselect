@@ -101,8 +101,9 @@ def _main_():
         input_size[1] = int(input_size[1] / 32) * 32
         print("Input size has to be a multiple of 32. Changed it to:", input_size)
     from .auto_2d_select import Auto2DSelectNet
-
-    auto2dnet = Auto2DSelectNet(batch_size, input_size, depth=1)
+    from .helper import create_circular_mask
+    mask = create_circular_mask(input_size[0], input_size[1])
+    auto2dnet = Auto2DSelectNet(batch_size, input_size, depth=1,mask=mask)
 
     auto2dnet.train(
         train_good_path=good_path,
@@ -116,7 +117,6 @@ def _main_():
         max_valid_img_per_file=max_valid_img_per_file,
         valid_good_path=valid_good_path,
         valid_bad_path=valid_bad_path,
-        apply_ciruclar_mask=True,
         full_rotation_aug=True
     )
 
