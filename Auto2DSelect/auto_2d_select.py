@@ -38,6 +38,7 @@ from keras.layers import (
     UpSampling2D,
     GlobalAveragePooling2D,
     Dropout,
+    Flatten
 )
 from keras.layers.merge import concatenate
 from keras.layers.advanced_activations import LeakyReLU
@@ -144,16 +145,16 @@ class BatchGenerator(Sequence):
                 self.augmenter.image_augmentation(img) for img in images
             ]  # 3. Do data augmentation (+ flip image randomly (X,Y,TH, NONE)) but only for training, not for validation
 
-
+        if self.mask is not None:
+            images = [
+                apply_mask(img,self.mask) for img in images
+            ]
 
         images = [
             normalize_img(img) for img in images
         ]  # 4. Normalize images ( subtract mean, divide by standard deviation)
 
-        if self.mask is not None:
-            images = [
-                apply_mask(img,self.mask) for img in images
-            ]
+
 
         if self.do_psd:
             psds = [calc_2d_spectra(img) for img in images]
@@ -408,8 +409,8 @@ class Auto2DSelectNet:
         model.summary()
         return model
 
-    def get_model_unet(self, input_size=(1024, 1024), kernel_size=(3, 3)):
-        inputs = Input(shape=(input_size[0], input_size[1], 1))
+    def get_model_unet(self, kernel_size=(3, 3)):
+        inputs = Input(shape=(self.input_size[0], self.input_size[1], 1))
         skips = [inputs]
 
         x = Conv2D(
@@ -592,12 +593,15 @@ class Auto2DSelectNet:
         )(x)
         feature_extractor = Model(inputs=inputs, outputs=outputs)
 
-        layer_out = GlobalAveragePooling2D()(feature_extractor(inputs))
+        #layer_out = GlobalAveragePooling2D()(feature_extractor(inputs))
+        layer_out = Flatten()(feature_extractor(inputs))
 
-        output = Dense(64, activation="relu", name="denseL1")(layer_out)
+        output = Dense(64, name="denseL1")(layer_out)
+        output = LeakyReLU(alpha=0.1)(output)
         # output = Dropout(0.2)(output)
-        output = Dense(10, activation="relu", name="denseL2")(output)
+        output = Dense(10, name="denseL2")(output)
         # output = Dropout(0.2)(output)
+        output = LeakyReLU(alpha=0.1)(output)
         output = Dense(1, activation="sigmoid", name="denseL3")(output)
 
         model = Model(inputs, output)
@@ -629,7 +633,6 @@ class Auto2DSelectNet:
         warmrestarts=True,
         valid_good_path=None,
         valid_bad_path=None,
-        mask=None,
         full_rotation_aug=False
     ):
         """
@@ -667,13 +670,16 @@ class Auto2DSelectNet:
             _, valid_data, _ = get_train_valid_tubles(
                 valid_good_path, valid_bad_path, 0.0
             )
+        #all_data = valid_data + train_data
 
+        #ccmatrix = get_correlation_matrix(all_data, len(valid_data))
+        #print(-np.sort(-1*ccmatrix.flatten()))
         train_generator = BatchGenerator(
             labeled_data=train_data,
             name="train",
             batch_size=self.batch_size,
             input_image_shape=self.input_size,
-            mask=mask,
+            mask=self.mask,
             full_rotation_aug=full_rotation_aug
         )
         valid_generator = BatchGenerator(
@@ -681,7 +687,7 @@ class Auto2DSelectNet:
             name="valid",
             batch_size=self.batch_size,
             input_image_shape=self.input_size,
-            mask=mask
+            mask=self.mask
         )
 
         # Define callbacks
@@ -858,11 +864,12 @@ class Auto2DSelectNet:
         if invert_imgs:
             list_img = [invert(img) for img in list_img]
 
+        if mask is not None:
+            list_img = [apply_mask(img,mask) for img in list_img]
 
         list_img = [normalize_img(img) for img in list_img]
 
-        if mask is not None:
-            list_img = [apply_mask(img,mask) for img in list_img]
+
 
         arr_img = np.array(list_img)
         arr_img = np.expand_dims(arr_img, 3)
@@ -898,6 +905,34 @@ def get_data_tubles(good_path, bad_path):
         list_bad += [(bad_p, index, 0.0) for index in get_key_list_images(bad_p)]
     return list_good + list_bad
 
+
+def get_correlation_matrix(img_list, splitindex=None):
+    print("Get COrr", splitindex, len(img_list))
+    from scipy import stats
+    if splitindex is None:
+        cc_matrix = np.zeros(shape=(len(img_list),len(img_list)))
+    else:
+        cc_matrix = np.zeros(shape=(len(img_list[:splitindex]), len(img_list[splitindex:])))
+
+    if splitindex is None:
+        for img_a_index in range(len(img_list)):
+            print(img_a_index/len(img_list))
+            imga = getImages_fromList_key([(img_list[img_a_index][0], img_list[img_a_index][1])])[0].flatten()
+            for img_b_index in range(img_a_index+1,len(img_list)):
+
+                imgb = getImages_fromList_key([(img_list[img_b_index][0],img_list[img_b_index][1])])[0]
+                cc = stats.pearsonr(imga, imgb.flatten())[0]
+                cc_matrix[img_a_index,img_b_index] = cc
+                cc_matrix[img_b_index,img_a_index] = cc
+    else:
+        for img_a_index in range(0, splitindex):
+            print(img_a_index / splitindex)
+            imga = getImages_fromList_key([(img_list[img_a_index][0], img_list[img_a_index][1])])[0].flatten()
+            for img_b_index in range(splitindex, len(img_list)):
+                imgb = getImages_fromList_key([(img_list[img_b_index][0], img_list[img_b_index][1])])[0]
+                cc = stats.pearsonr(imga, imgb.flatten())[0]
+                cc_matrix[img_a_index,img_b_index-splitindex] = cc
+    return cc_matrix
 
 def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file=-1):
     list_bad_train = list()
@@ -948,8 +983,6 @@ def get_train_valid_tubles(good_path, bad_path, thresh=0.9, max_val_img_per_file
     weight_good=0
     weight_bad=0
     if len(list_train)>0:
-        weight_good = 1 - float(len(list_good_train)) / len(list_train)
-        weight_bad = 1 - float(len(list_bad_train)) / len(list_train)
         if len(list_good_train) > len(list_bad_train):
             weight_good = 1
             weight_bad = len(list_good_train)/len(list_bad_train)
