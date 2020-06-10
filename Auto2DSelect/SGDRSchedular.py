@@ -1,7 +1,6 @@
-import keras.backend as K
+import tensorflow.keras.backend as K
 import numpy as np
-from keras.callbacks import Callback
-
+from tensorflow.keras.callbacks import Callback
 
 class SGDRScheduler(Callback):
     """Cosine annealing learning rate scheduler with periodic restarts.

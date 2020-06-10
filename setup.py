@@ -28,14 +28,13 @@ setup(
     license='MIT',
     author='Thorsten Wagner',
     extras_require = {
-        'gpu':  ['tensorflow-gpu == 1.10.1'],
-        'cpu': ['tensorflow == 1.10.1']
+        'gpu':  ['tensorflow-gpu == 2.2.0'],
+        'cpu': ['tensorflow == 2.2.0']
     },
     install_requires=[
-        "Keras == 2.2.5",
-        "numpy == 1.14.5",
+        "numpy == 1.18.5",
         "h5py >= 2.5.0",
-        "scipy >= 1.3.0"
+        "scipy >= 1.3.0",
         "pillow",
         "tqdm",
         "mrcfile"

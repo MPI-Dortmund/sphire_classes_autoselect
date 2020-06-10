@@ -26,8 +26,7 @@ SOFTWARE.
 """
 # pylint: disable=C0330, C0301
 
-import os
-import multiprocessing
+'''
 from keras.utils import Sequence
 from keras.layers import (
     Conv2D,
@@ -51,8 +50,10 @@ from keras.callbacks import (
     ReduceLROnPlateau,
     TensorBoard,
 )
-
+'''
 # from swa.keras import SWA
+import os
+import multiprocessing
 import numpy as np
 from Auto2DSelect.SGDRSchedular import SGDRScheduler
 from .helper import (
@@ -66,9 +67,11 @@ from .helper import (
     calc_2d_spectra
 )
 from .augmentation import Augmentation
-
-
-class BatchGenerator(Sequence):
+import tensorflow.keras as keras
+import tensorflow.keras.layers as layers
+import tensorflow.keras.utils as utils
+import tensorflow.keras.callbacks as callbacks
+class BatchGenerator(utils.Sequence):
     """
     This is a generator for batches of training data. It reads in a selection of images (depending
     on the batch size), augment the images and return them together with target values.
@@ -176,16 +179,8 @@ class BatchGenerator(Sequence):
         else:
             images = images[:, :, :, np.newaxis]
 
-        # print(str(idx)+self.name)
-        '''
-        weights=[]
-        for l in labels:
-            if l == 0:
-                weights.append(self.weight_0)
-            elif l == 1:
-                weights.append(self.weight_1)
-        '''
-        return images, labels
+
+        return images, np.array(labels)
 
     def on_epoch_end(self):
         """
@@ -218,7 +213,7 @@ class Auto2DSelectNet:
         :param input_size: Image input size
         :return: A keras model
         """
-        input_image = Input(shape=(self.input_size[0], self.input_size[1], depth))
+        input_image = keras.Input(shape=(self.input_size[0], self.input_size[1], depth))
 
         # name of first layer
         if depth == 1:
@@ -227,7 +222,7 @@ class Auto2DSelectNet:
             name_first_layer = "bablub"
 
         # Layer 1
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             32,
             (3, 3),
             strides=(1, 1),
@@ -235,376 +230,376 @@ class Auto2DSelectNet:
             name=name_first_layer,
             use_bias=False,
         )(input_image)
-        layer_out = BatchNormalization(name="norm_1")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
-        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_1")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 2
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             64, (3, 3), strides=(1, 1), padding="same", name="conv_2", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_2")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
-        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_2")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 3
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             128, (3, 3), strides=(1, 1), padding="same", name="conv_3", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_3")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_3")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 4
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             64, (1, 1), strides=(1, 1), padding="same", name="conv_4", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_4")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_4")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 5
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             128, (3, 3), strides=(1, 1), padding="same", name="conv_5", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_5")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
-        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_5")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 6
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             256, (3, 3), strides=(1, 1), padding="same", name="conv_6", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_6")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_6")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 7
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             128, (1, 1), strides=(1, 1), padding="same", name="conv_7", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_7")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_7")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 8
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             256, (3, 3), strides=(1, 1), padding="same", name="conv_8", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_8")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
-        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_8")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 9
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             512, (3, 3), strides=(1, 1), padding="same", name="conv_9", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_9")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_9")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 10
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             256, (1, 1), strides=(1, 1), padding="same", name="conv_10", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_10")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_10")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 11
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             512, (3, 3), strides=(1, 1), padding="same", name="conv_11", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_11")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_11")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 12
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             256, (1, 1), strides=(1, 1), padding="same", name="conv_12", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_12")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_12")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 13
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             512, (3, 3), strides=(1, 1), padding="same", name="conv_13", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_13")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_13")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         skip_connection = layer_out
 
-        layer_out = MaxPooling2D(pool_size=(2, 2))(layer_out)
+        layer_out = layers.MaxPooling2D(pool_size=(2, 2))(layer_out)
 
         # Layer 14
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_14", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_14")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_14")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 15
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             512, (1, 1), strides=(1, 1), padding="same", name="conv_15", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_15")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_15")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 16
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_16", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_16")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_16")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 17
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             512, (1, 1), strides=(1, 1), padding="same", name="conv_17", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_17")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_17")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 18
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_18", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_18")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_18")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 19
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_19", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_19")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_19")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
         # Layer 20
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_20", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_20")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_20")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
-        layer_out = UpSampling2D(size=(2, 2))(layer_out)
+        layer_out = layers.UpSampling2D(size=(2, 2))(layer_out)
 
-        skip_connection = Conv2D(
+        skip_connection = layers.Conv2D(
             256, (1, 1), strides=(1, 1), padding="same", name="conv_21_", use_bias=False
         )(skip_connection)
-        skip_connection = BatchNormalization(name="norm_21_")(skip_connection)
-        skip_connection = LeakyReLU(alpha=0.1)(skip_connection)
-        layer_out = concatenate([skip_connection, layer_out])
+        skip_connection = layers.BatchNormalization(name="norm_21_")(skip_connection)
+        skip_connection = layers.LeakyReLU(alpha=0.1)(skip_connection)
+        layer_out = layers.concatenate([skip_connection, layer_out])
 
         # Layer 21
-        layer_out = Conv2D(
+        layer_out = layers.Conv2D(
             1024, (3, 3), strides=(1, 1), padding="same", name="conv_22", use_bias=False
         )(layer_out)
-        layer_out = BatchNormalization(name="norm_22")(layer_out)
-        layer_out = LeakyReLU(alpha=0.1)(layer_out)
+        layer_out = layers.BatchNormalization(name="norm_22")(layer_out)
+        layer_out = layers.LeakyReLU(alpha=0.1)(layer_out)
 
-        feature_extractor = Model(input_image, layer_out)
+        feature_extractor = keras.Model(input_image, layer_out)
 
-        layer_out = GlobalAveragePooling2D()(feature_extractor(input_image))
+        layer_out = layers.GlobalAveragePooling2D()(feature_extractor(input_image))
 
-        output = Dense(64, activation="relu", name="denseL1")(layer_out)
+        output = layers.Dense(64, activation="relu", name="denseL1")(layer_out)
         # output = Dropout(0.2)(output)
-        output = Dense(10, activation="relu", name="denseL2")(output)
+        output = layers.Dense(10, activation="relu", name="denseL2")(output)
         # output = Dropout(0.2)(output)
-        output = Dense(1, activation="sigmoid", name="denseL3")(output)
+        output = layers.Dense(1, activation="sigmoid", name="denseL3")(output)
 
-        model = Model(input_image, output)
+        model = keras.Model(input_image, output)
         model.summary()
         return model
 
     def get_model_unet(self, kernel_size=(3, 3)):
-        inputs = Input(shape=(self.input_size[0], self.input_size[1], 1))
+        inputs = keras.Input(shape=(self.input_size[0], self.input_size[1], 1))
         skips = [inputs]
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="enc_conv0",
             filters=48,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(inputs)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = Conv2D(
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.Conv2D(
             name="enc_conv1",
             filters=48,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D((2, 2))(x)  # --- pool_1
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.MaxPooling2D((2, 2))(x)  # --- pool_1
         skips.append(x)
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="enc_conv2",
             filters=48,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D((2, 2))(x)  # --- pool_2
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.MaxPooling2D((2, 2))(x)  # --- pool_2
         skips.append(x)
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="enc_conv3",
             filters=48,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D((2, 2))(x)  # --- pool_3
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.MaxPooling2D((2, 2))(x)  # --- pool_3
         skips.append(x)
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="enc_conv4",
             filters=48,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D((2, 2))(x)  # --- pool_4
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.MaxPooling2D((2, 2))(x)  # --- pool_4
         skips.append(x)
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="enc_conv5",
             filters=48,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = MaxPooling2D((2, 2))(x)  # --- pool_5 (not re-used)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.MaxPooling2D((2, 2))(x)  # --- pool_5 (not re-used)
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="enc_conv6",
             filters=48,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
 
-        x = UpSampling2D((2, 2))(x)
+        x = layers.UpSampling2D((2, 2))(x)
 
-        x = concatenate([x, skips.pop()])
-        x = Conv2D(
+        x = layers.concatenate([x, skips.pop()])
+        x = layers.Conv2D(
             name="dec_conv5",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="dec_conv5b",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = UpSampling2D((2, 2))(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.UpSampling2D((2, 2))(x)
 
-        x = concatenate([x, skips.pop()])
+        x = layers.concatenate([x, skips.pop()])
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="dec_conv4",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = Conv2D(
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.Conv2D(
             name="dec_conv4b",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
 
-        x = UpSampling2D((2, 2))(x)
+        x = layers.UpSampling2D((2, 2))(x)
 
-        x = concatenate([x, skips.pop()])
+        x = layers.concatenate([x, skips.pop()])
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="dec_conv3",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = Conv2D(
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.Conv2D(
             name="dec_conv3b",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = UpSampling2D((2, 2))(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.UpSampling2D((2, 2))(x)
 
-        x = concatenate([x, skips.pop()])
-        x = Conv2D(
+        x = layers.concatenate([x, skips.pop()])
+        x = layers.Conv2D(
             name="dec_conv2",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = Conv2D(
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.Conv2D(
             name="dec_conv2b",
             filters=96,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
 
-        x = UpSampling2D((2, 2))(x)
-        x = concatenate([x, skips.pop()])
+        x = layers.UpSampling2D((2, 2))(x)
+        x = layers.concatenate([x, skips.pop()])
 
-        x = Conv2D(
+        x = layers.Conv2D(
             name="dec_conv1a",
             filters=64,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = Conv2D(
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        x = layers.Conv2D(
             name="dec_conv1b",
             filters=32,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
 
-        outputs = Conv2D(
+        outputs = layers.Conv2D(
             filters=1,
             kernel_size=kernel_size,
             padding="same",
             kernel_initializer="he_normal",
         )(x)
-        feature_extractor = Model(inputs=inputs, outputs=outputs)
+        feature_extractor = keras.Model(inputs=inputs, outputs=outputs)
 
         #layer_out = GlobalAveragePooling2D()(feature_extractor(inputs))
-        layer_out = Flatten()(feature_extractor(inputs))
+        layer_out = layers.Flatten()(feature_extractor(inputs))
 
-        output = Dense(64, name="denseL1")(layer_out)
-        output = LeakyReLU(alpha=0.1)(output)
+        output = layers.Dense(64, name="denseL1")(layer_out)
+        output = layers.LeakyReLU(alpha=0.1)(output)
         # output = Dropout(0.2)(output)
-        output = Dense(10, name="denseL2")(output)
+        output = layers.Dense(10, name="denseL2")(output)
         # output = Dropout(0.2)(output)
-        output = LeakyReLU(alpha=0.1)(output)
-        output = Dense(1, activation="sigmoid", name="denseL3")(output)
+        output = layers.LeakyReLU(alpha=0.1)(output)
+        output = layers.Dense(1, activation="sigmoid", name="denseL3")(output)
 
-        model = Model(inputs, output)
+        model = keras.Model(inputs, output)
         model.summary()
         return model
 
@@ -682,6 +677,7 @@ class Auto2DSelectNet:
             mask=self.mask,
             full_rotation_aug=full_rotation_aug
         )
+
         valid_generator = BatchGenerator(
             labeled_data=valid_data,
             name="valid",
@@ -692,31 +688,31 @@ class Auto2DSelectNet:
 
         # Define callbacks
         all_callbacks = []
-        checkpoint = ModelCheckpoint(
+        checkpoint = callbacks.ModelCheckpoint(
             save_weights_name,
             monitor="val_loss",
             verbose=1,
             save_best_only=True,
             save_weights_only=True,
             mode="min",
-            period=1,
+            save_freq='epoch',
         )
         all_callbacks.append(checkpoint)
 
-        early_stop = EarlyStopping(
+        early_stop = callbacks.EarlyStopping(
             monitor="val_loss",
             min_delta=0.0005,
             patience=nb_epoch_early,
             mode="min",
-            verbose=1,
+            verbose=0,
         )
         all_callbacks.append(early_stop)
 
-        reduceLROnPlateau = ReduceLROnPlateau(
+        reduceLROnPlateau = callbacks.ReduceLROnPlateau(
             monitor="val_loss",
             factor=0.1,
             patience=int(nb_epoch_early * 0.6),
-            verbose=1,
+            verbose=0,
         )
         all_callbacks.append(reduceLROnPlateau)
 
@@ -735,15 +731,17 @@ class Auto2DSelectNet:
             )
             + 1
         )
-        tensorboard = TensorBoard(
+        '''
+        tensorboard = callbacks.TensorBoard(
             log_dir=os.path.expanduser("logs/") + "cinderella" + "_" + str(tb_counter),
             histogram_freq=0,
             write_graph=True,
             write_images=False,
         )
         all_callbacks.append(tensorboard)
+        '''
         if not warmrestarts:
-            reduce_lr_on_plateau = ReduceLROnPlateau(
+            reduce_lr_on_plateau = callbacks.ReduceLROnPlateau(
                 monitor="val_loss",
                 factor=0.1,
                 patience=int(nb_epoch_early * 0.6),
@@ -760,6 +758,7 @@ class Auto2DSelectNet:
                 mult_factor=1.5,
             )
             all_callbacks.append(schedule)
+
         # define swa callback
         """
         swa = SWA(start_epoch=5,
@@ -770,7 +769,7 @@ class Auto2DSelectNet:
                   verbose=1)
         """
 
-        optimizer = Adam(
+        optimizer = keras.optimizers.Adam(
             lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0
         )
 
@@ -778,11 +777,15 @@ class Auto2DSelectNet:
         #weights = {1: 1, 0: 1}
         print("Weights", weights)
         self.model.compile(
-            optimizer=optimizer, metrics=["binary_accuracy"], loss="binary_crossentropy"
+            optimizer=optimizer,
+            metrics=["binary_accuracy"],
+            loss="binary_crossentropy",
+
         )
-        self.model.fit_generator(
-            generator=train_generator,
+        self.model.fit(
+            x=train_generator,
             validation_data=valid_generator,
+            validation_batch_size=self.batch_size,
             workers=12,
             epochs=nb_epoch,
             callbacks=all_callbacks,
@@ -1025,26 +1028,28 @@ def focal_loss(y_true, y_pred):
     gamma = 2.0
     alpha = 4.0
     epsilon = 1.0e-9
-    y_true = tf.convert_to_tensor(y_true, tf.float32)
-    y_pred = tf.convert_to_tensor(y_pred, tf.float32)
+    y_true = tf.convert_to_tensor(value=y_true, dtype=tf.float32)
+    y_pred = tf.convert_to_tensor(value=y_pred, dtype=tf.float32)
 
     model_out = tf.add(y_pred, epsilon)
-    ce = tf.multiply(y_true, -tf.log(model_out))
+    ce = tf.multiply(y_true, -tf.math.log(model_out))
     weight = tf.multiply(y_true, tf.pow(tf.subtract(1.0, model_out), gamma))
     fl = tf.multiply(alpha, tf.multiply(weight, ce))
-    reduced_fl = tf.reduce_max(fl, axis=1)
-    return tf.reduce_mean(reduced_fl)
+    reduced_fl = tf.reduce_max(input_tensor=fl, axis=1)
+    return tf.reduce_mean(input_tensor=reduced_fl)
 
 
 def focal_loss(y_true, y_pred):
     import tensorflow as tf
+    import tensorflow.keras.backend as K
 
     gamma = 2.0
     alpha = 4.0
     # epsilon = 1.e-9
     # y_pred = tf.add(y_pred, epsilon)
-    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
-    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
+    pt_1 = tf.compat.v1.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
+    pt_0 = tf.compat.v1.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
+
     return -K.sum(alpha * K.pow(1.0 - pt_1, gamma) * K.log(pt_1)) - K.sum(
         alpha * K.pow(pt_0, gamma) * K.log(1.0 - pt_0)
     )

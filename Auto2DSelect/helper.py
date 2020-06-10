@@ -177,7 +177,7 @@ def getImages_fromList_key(file_index_tubles):
         if path.isfile(path_to_file):
             if path.basename(path_to_file).split(".")[1] == "hdf":
                 try:
-                    with h5py.File(path_to_file) as f:
+                    with h5py.File(path_to_file, 'r') as f:
                         if isinstance(list_images, list) or isinstance(
                             list_images, tuple
                         ):
