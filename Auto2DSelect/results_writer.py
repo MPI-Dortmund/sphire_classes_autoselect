@@ -48,7 +48,7 @@ def write_results_to_disk(results, output_path):
         :return: None
         """
         counter = 0
-        with h5py.File(original_path, driver="core") as original:
+        with h5py.File(original_path, 'r', driver="core") as original:
             with h5py.File(out_path, "w") as f:
                 group = f.create_group("MDF/images/")
 
