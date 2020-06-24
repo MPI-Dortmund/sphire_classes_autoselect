@@ -26,32 +26,6 @@ SOFTWARE.
 """
 # pylint: disable=C0330, C0301
 
-'''
-from keras.utils import Sequence
-from keras.layers import (
-    Conv2D,
-    Input,
-    MaxPooling2D,
-    BatchNormalization,
-    Dense,
-    UpSampling2D,
-    GlobalAveragePooling2D,
-    Dropout,
-    Flatten
-)
-from keras.layers.merge import concatenate
-from keras.layers.advanced_activations import LeakyReLU
-from keras.models import Model
-from keras.optimizers import Adam
-from keras import backend as K
-from keras.callbacks import (
-    ModelCheckpoint,
-    EarlyStopping,
-    ReduceLROnPlateau,
-    TensorBoard,
-)
-'''
-# from swa.keras import SWA
 import os
 import multiprocessing
 import numpy as np
