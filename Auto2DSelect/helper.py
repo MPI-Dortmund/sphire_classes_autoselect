@@ -211,19 +211,19 @@ def getImages_fromList_key(file_index_tubles):
                     exit()
             elif path.basename(path_to_file).split(".")[1] in ["mrc", "mrcs"]:
                 data = []
-                with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
+                mrc = mrcfile.open(path_to_file, permissive=True, mode="r")
 
-                    if isinstance(list_images, int):
-                        list_images = [list_images]
+                if isinstance(list_images, int):
+                    list_images = [list_images]
 
-                    if isinstance(list_images, list) or isinstance(list_images, tuple):
-                        if mrc.header.nz > 1:
-                            if len(list_images)==1:
-                                data = mrc.data[list_images[0]]
-                            else:
-                                data = [mrc.data[i] for i in list_images]
-                        elif len(list_images) == 1:
-                            data = mrc.data
+                if isinstance(list_images, list) or isinstance(list_images, tuple):
+                    if mrc.header.nz > 1:
+                        if len(list_images)==1:
+                            data = mrc.data[list_images[0]]
+                        else:
+                            data = [mrc.data[i] for i in list_images]
+                    elif len(list_images) == 1:
+                        data = mrc.data
 
         result_data.append(data)
 
