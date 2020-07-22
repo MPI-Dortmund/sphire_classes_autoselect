@@ -315,7 +315,7 @@ def normalize_img(img):
     # img = img.astype(np.float64, copy=False)
     mean = np.mean(img)
     std = np.std(img)
-    img = (img - mean) / std
+    img = (img - mean) / (std+0.00001)
     # img = img.astype(np.float32, copy=False)
     return img
 
