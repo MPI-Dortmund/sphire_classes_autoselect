@@ -732,7 +732,7 @@ class Auto2DSelectNet:
                 max_lr=1e-4,
                 steps_per_epoch=len(train_generator),
                 lr_decay=0.9,
-                cycle_length=5,
+                cycle_length=min(5,nb_epoch-1),
                 mult_factor=1.5,
             )
             all_callbacks.append(schedule)
@@ -778,7 +778,8 @@ class Auto2DSelectNet:
 
         with h5py.File(save_weights_name, mode="r+") as f:
             f["input_size"] = self.input_size
-            f["mask_radius"] = [self.mask_radius]
+            if self.mask_radius is not None:
+                f["mask_radius"] = [self.mask_radius]
 
         # with h5py.File(average_filename, mode='r+') as f:
         #    f["input_size"] = self.input_size
