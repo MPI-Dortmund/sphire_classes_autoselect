@@ -169,7 +169,7 @@ class Auto2DSelectNet:
     Network class for cinderella
     """
 
-    def __init__(self, batch_size, input_size, depth=1, mask=None):
+    def __init__(self, batch_size, input_size, depth=1, mask_radius=None):
         """
 
         :param batch_size: Batch size for training / prediction
@@ -177,9 +177,14 @@ class Auto2DSelectNet:
         """
         self.batch_size = batch_size
         self.input_size = input_size
-        self.model = self.build_phosnet_model(depth)
-        self.mask = mask
-        #self.model = self.get_model_unet(input_size=(self.input_size[0],self.input_size[1]))
+        #self.model = self.build_phosnet_model(depth)
+        self.mask = None
+        self.mask_radius = mask_radius
+        if mask_radius is not None:
+            from .helper import create_circular_mask
+            self.mask = create_circular_mask(input_size[0], input_size[1], radius=mask_radius)
+
+        self.model = self.get_model_unet()
 
     def build_phosnet_model(self,depth):
         """
@@ -377,7 +382,6 @@ class Auto2DSelectNet:
         model = keras.Model(input_image, output)
         model.summary()
         return model
-
     def get_model_unet(self, kernel_size=(3, 3)):
         inputs = keras.Input(shape=(self.input_size[0], self.input_size[1], 1))
         skips = [inputs]
@@ -774,6 +778,7 @@ class Auto2DSelectNet:
 
         with h5py.File(save_weights_name, mode="r+") as f:
             f["input_size"] = self.input_size
+            f["mask_radius"] = [self.mask_radius]
 
         # with h5py.File(average_filename, mode='r+') as f:
         #    f["input_size"] = self.input_size
