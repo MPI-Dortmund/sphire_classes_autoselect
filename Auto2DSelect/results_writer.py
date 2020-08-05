@@ -115,8 +115,8 @@ def write_results_to_disk(results, output_path):
         '''
         In case of classes, write new classes
         '''
-        filename_ext = os.path.basename(path_original).split(".")[1]
-        filename = os.path.basename(path_original).split(".")[0]
+        filename_ext = os.path.basename(path_original).split(".")[-1]
+        filename = ''.join(os.path.basename(path_original).split(".")[:-1])
         if filename_ext == "hdf":
             write_hdf(
                 path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
@@ -151,7 +151,7 @@ def write_results_to_disk(results, output_path):
         In case of micrographs, write a good.txt and bad.txt with respective filenames.
         Moreover write a filename_confidence file
         '''
-        if os.path.basename(path_original).split(".")[1] == "mrc" or os.path.basename(path_original).split(".")[1] == "tiff":
+        if os.path.basename(path_original).split(".")[-1] == "mrc" or os.path.basename(path_original).split(".")[-1] == "tiff":
             conf = 0
             if results[running_index - 1][2]==1:
                 write_line(os.path.join(output_path,"good.txt"),results[running_index-1][0])
