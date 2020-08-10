@@ -133,7 +133,7 @@ def get_key_list_images(path_to_file):
     print("Try to list images on", path_to_file)
 
     if path.isfile(path_to_file):
-        filename_ext = path.basename(path_to_file).split(".")[1]
+        filename_ext = path.basename(path_to_file).split(".")[-1]
         if filename_ext == "hdf":
             try:
                 with h5py.File(path_to_file, "r") as f:
@@ -175,7 +175,7 @@ def getImages_fromList_key(file_index_tubles):
     for path_to_file, list_images in file_index_tubles:
         data = list()
         if path.isfile(path_to_file):
-            if path.basename(path_to_file).split(".")[1] == "hdf":
+            if path.basename(path_to_file).split(".")[-1] == "hdf":
                 try:
                     with h5py.File(path_to_file, 'r') as f:
                         if isinstance(list_images, list) or isinstance(
@@ -209,7 +209,7 @@ def getImages_fromList_key(file_index_tubles):
                     print(list_images)
                     print("there are " + str(len(f["MDF"]["images"])))
                     exit()
-            elif path.basename(path_to_file).split(".")[1] in ["mrc", "mrcs"]:
+            elif path.basename(path_to_file).split(".")[-1] in ["mrc", "mrcs"]:
                 data = []
                 mrc = mrcfile.open(path_to_file, permissive=True, mode="r")
 
@@ -241,7 +241,7 @@ def getImages_fromList_key_old(path_to_file, list_images):
     """
     data = list()
     if path.isfile(path_to_file):
-        if path.basename(path_to_file).split(".")[1] == "hdf":
+        if path.basename(path_to_file).split(".")[-1] == "hdf":
             try:
                 with h5py.File(path_to_file, driver="core") as f:
                     if isinstance(list_images, list) or isinstance(list_images, tuple):
@@ -269,7 +269,7 @@ def getImages_fromList_key_old(path_to_file, list_images):
                 print(list_images)
                 print("there are " + str(len(f["MDF"]["images"])))
                 exit()
-        elif path.basename(path_to_file).split(".")[1] in ["mrc", "mrcs"]:
+        elif path.basename(path_to_file).split(".")[-1] in ["mrc", "mrcs"]:
             data = []
             with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
 
