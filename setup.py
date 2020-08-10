@@ -24,7 +24,7 @@ setup(
     version=find_version("Auto2DSelect", "__init__.py"),
     python_requires='>3.4.0',
     packages=['Auto2DSelect'],
-    url='https://github.com/MPI-Dortmund/sphire_classes_ausptoselect',
+    url='https://github.com/MPI-Dortmund/sphire_classes_autoselect',
     license='MIT',
     author='Thorsten Wagner',
     extras_require = {
@@ -35,7 +35,7 @@ setup(
         "Keras == 2.2.5",
         "numpy == 1.14.5",
         "h5py >= 2.5.0",
-        "scipy >= 1.3.0"
+        "scipy >= 1.3.0",
         "pillow",
         "tqdm",
         "mrcfile"
