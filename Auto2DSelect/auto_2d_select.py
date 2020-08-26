@@ -127,7 +127,6 @@ class BatchGenerator(Sequence):
             ]
             class_index_tubles = [(class_file_path, indi) for indi in indicis_for_class_file]
             images_from_file = getImages_fromList_key(class_index_tubles)
-
             images_from_file = [
                 resize_img(img, (self.input_image_shape[0], self.input_image_shape[1]))
                 for img in images_from_file
@@ -210,7 +209,7 @@ class Auto2DSelectNet:
         self.input_size = input_size
         self.mask = None
         self.mask_radius = mask_radius
-        if mask_radius is not None:
+        if mask_radius is not None and mask_radius != -1:
             from .helper import create_circular_mask
             self.mask = create_circular_mask(input_size[0], input_size[1], radius=mask_radius)
         #self.model = self.get_model_unet(input_size=(self.input_size[0],self.input_size[1]))

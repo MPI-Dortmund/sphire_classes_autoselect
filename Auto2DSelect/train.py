@@ -61,7 +61,7 @@ def _main_():
             config = json.load(config_buffer)
         except json.JSONDecodeError:
             print(
-                "Your configuration file seems to be corruped. Please check if it is valid."
+                "Your configuration file seems to be corrupted. Please check if it is valid."
             )
 
     input_size = config["model"]["input_size"]
@@ -73,6 +73,9 @@ def _main_():
     nb_epoch = config["train"]["nb_epoch"]
     nb_epoch_early_stop = config["train"]["nb_early_stop"]
     learning_rate = config["train"]["learning_rate"]
+    mask_radius=None
+    if "mask_radius" in config["model"]:
+        mask_radius = config["model"]["mask_radius"]
 
     valid_good_path = None
     valid_bad_path = None
@@ -101,9 +104,13 @@ def _main_():
         input_size[1] = int(input_size[1] / 32) * 32
         print("Input size has to be a multiple of 32. Changed it to:", input_size)
     from .auto_2d_select import Auto2DSelectNet
-    from .helper import create_circular_mask
-    mask = create_circular_mask(input_size[0], input_size[1])
-    auto2dnet = Auto2DSelectNet(batch_size, input_size, depth=1,mask=mask)
+    if mask_radius is None:
+        mask_radius = input_size[0]
+
+
+
+    full_rotation_aug = mask_radius != -1
+    auto2dnet = Auto2DSelectNet(batch_size, input_size, depth=1,mask_radius=mask_radius)
 
     auto2dnet.train(
         train_good_path=good_path,
@@ -117,7 +124,7 @@ def _main_():
         max_valid_img_per_file=max_valid_img_per_file,
         valid_good_path=valid_good_path,
         valid_bad_path=valid_bad_path,
-        full_rotation_aug=True
+        full_rotation_aug=full_rotation_aug
     )
 
 

@@ -123,6 +123,42 @@ def getList_relevant_files(path_to_files):
 
 """ FUNCTION TO READ THE HDF"""
 
+def get_not_non_indices(path):
+    import os
+    filename_ext = os.path.basename(path).split(".")[-1]
+    result_list = None
+    try:
+        if filename_ext == "mrcs":
+            with mrcfile.mmap(path, permissive=True, mode="r") as mrc:
+                list_candidate = [i for i in range(mrc.header.nz) if np.isnan(mrc.data[i]).any() == False]
+                if len(list_candidate)>1:
+                    result_list = list_candidate
+        if filename_ext == "mrc":
+            with mrcfile.mmap(path, permissive=True, mode="r") as mrc:
+                if np.isnan(mrc.data).any() == False:
+                    result_list = list(range(1))
+    except Exception as e:
+        print(e)
+        print(
+            "WARNING in get_list_images: the file '"
+            + path
+            + " is not an valid mrc file. It will be ignored"
+        )
+
+    if filename_ext == "hdf":
+        try:
+            with h5py.File(path, "r") as f:
+                list_candidate = [int(v) for v in list(f["MDF"]["images"]) if np.isnan(f["MDF"]["images"][str(v)]["image"][()]).any() == False]
+        except:
+            print(
+                "WARNING in get_list_images: the file '"
+                + path
+                + " is not an HDF file with the following format:\n\t['MDF']['images']. It will be ignored"
+            )
+        if len(list_candidate) > 1:
+            result_list = list_candidate
+
+    return result_list
 
 def get_key_list_images(path_to_file):
     """
@@ -131,36 +167,7 @@ def get_key_list_images(path_to_file):
     :return:
     """
     print("Try to list images on", path_to_file)
-
-    if path.isfile(path_to_file):
-        filename_ext = path.basename(path_to_file).split(".")[-1]
-        if filename_ext == "hdf":
-            try:
-                with h5py.File(path_to_file, "r") as f:
-                    data = [int(v) for v in list(f["MDF"]["images"])]
-                return data
-            except:
-                print(
-                    "WARNING in get_list_images: the file '"
-                    + path_to_file
-                    + " is not an HDF file with the following format:\n\t['MDF']['images']. It will be ignored"
-                )
-        elif filename_ext in ["mrcs", "mrc"]:
-            try:
-                if filename_ext == "mrcs":
-                    with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
-                        data = list(range(mrc.header.nz))
-                    return data
-                else:
-                    data = list(range(1))
-                    return data
-            except Exception as e:
-                print(e)
-                print(
-                    "WARNING in get_list_images: the file '"
-                    + path_to_file
-                    + " is not an valid mrc file. It will be ignored"
-                )
+    return get_not_non_indices(path_to_file)
 
 
 def getImages_fromList_key(file_index_tubles):
@@ -177,7 +184,7 @@ def getImages_fromList_key(file_index_tubles):
         if path.isfile(path_to_file):
             if path.basename(path_to_file).split(".")[-1] == "hdf":
                 try:
-                    with h5py.File(path_to_file) as f:
+                    with h5py.File(path_to_file, 'r') as f:
                         if isinstance(list_images, list) or isinstance(
                             list_images, tuple
                         ):
@@ -186,8 +193,6 @@ def getImages_fromList_key(file_index_tubles):
                                 f["MDF"]["images"][str(i)]["image"][()]
                                 for i in list_images
                             ]  # [()] is used instead of .value
-                            print("LIST!!!", type(data))
-
                         elif isinstance(list_images, int):
                             data = f["MDF"]["images"][str(list_images)]["image"][()]
                         else:
@@ -315,7 +320,7 @@ def normalize_img(img):
     # img = img.astype(np.float64, copy=False)
     mean = np.mean(img)
     std = np.std(img)
-    img = (img - mean) / std
+    img = (img - mean) / (std+0.00001)
     # img = img.astype(np.float32, copy=False)
     return img
 

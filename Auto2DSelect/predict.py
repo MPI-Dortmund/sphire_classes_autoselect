@@ -94,7 +94,7 @@ def _main_():
     if args.gpu != -1:
         str_gpu = str(args.gpu)
         os.environ["CUDA_VISIBLE_DEVICES"] = str_gpu
-
+    mask_radius=None
     with h5py.File(weights_path, mode="r") as f:
         try:
             import numpy as np
@@ -104,10 +104,15 @@ def _main_():
             import sys
             sys.exit(0)
 
+        try:
+            mask_radius = tuple(f["mask_radius"])[0]
+        except KeyError:
+            print("Did not found mask radius in meta data. Set it do none.!")
+            mask_radius = None
+
     batch_size = args.batch_size
     from .auto_2d_select import Auto2DSelectNet
-    mask = create_circular_mask(input_size[0],input_size[1])
-    auto2dnet = Auto2DSelectNet(batch_size, input_size, mask=mask)
+    auto2dnet = Auto2DSelectNet(batch_size, input_size, mask_radius=mask_radius)
     result = auto2dnet.predict(input_path, weights_path, good_thresh=threshold,invert_images=invert_images)
 
 
