@@ -131,7 +131,7 @@ def get_not_non_indices(path):
         if filename_ext == "mrcs":
             with mrcfile.mmap(path, permissive=True, mode="r") as mrc:
                 list_candidate = [i for i in range(mrc.header.nz) if np.isnan(mrc.data[i]).any() == False]
-                if len(list_candidate)>1:
+                if len(list_candidate)>0:
                     result_list = list_candidate
         if filename_ext == "mrc":
             with mrcfile.mmap(path, permissive=True, mode="r") as mrc:
@@ -155,9 +155,8 @@ def get_not_non_indices(path):
                 + path
                 + " is not an HDF file with the following format:\n\t['MDF']['images']. It will be ignored"
             )
-        if len(list_candidate) > 1:
+        if len(list_candidate) > 0:
             result_list = list_candidate
-
     return result_list
 
 def get_key_list_images(path_to_file):
