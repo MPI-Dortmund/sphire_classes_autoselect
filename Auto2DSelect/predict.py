@@ -110,6 +110,9 @@ def _main_():
             print("Did not found mask radius in meta data. Set it do none.!")
             mask_radius = None
 
+    if mask_radius is None:
+        mask_radius = input_size[0] * 0.4
+
     batch_size = args.batch_size
     from .auto_2d_select import Auto2DSelectNet
     auto2dnet = Auto2DSelectNet(batch_size, input_size, mask_radius=mask_radius)

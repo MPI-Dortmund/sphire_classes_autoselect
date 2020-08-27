@@ -105,11 +105,12 @@ def _main_():
         print("Input size has to be a multiple of 32. Changed it to:", input_size)
     from .auto_2d_select import Auto2DSelectNet
     if mask_radius is None:
-        mask_radius = input_size[0]
+        mask_radius = input_size[0] * 0.4
 
 
 
     full_rotation_aug = mask_radius != -1
+    print("Mask radius is", mask_radius)
     auto2dnet = Auto2DSelectNet(batch_size, input_size, depth=1,mask_radius=mask_radius)
 
     auto2dnet.train(
@@ -126,7 +127,6 @@ def _main_():
         valid_bad_path=valid_bad_path,
         full_rotation_aug=full_rotation_aug
     )
-
 
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")

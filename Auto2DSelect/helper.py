@@ -123,20 +123,25 @@ def getList_relevant_files(path_to_files):
 
 """ FUNCTION TO READ THE HDF"""
 
-def get_not_non_indices(path):
+def get_key_list_images(path):
+    """
+    Returns the list of the keys representing the images in the hdf/mrcs file. It will be converted in list of integer
+    :param path:
+    :return:
+    """
+    print("Try to list images on", path)
     import os
     filename_ext = os.path.basename(path).split(".")[-1]
     result_list = None
     try:
         if filename_ext == "mrcs":
             with mrcfile.mmap(path, permissive=True, mode="r") as mrc:
-                list_candidate = [i for i in range(mrc.header.nz) if np.isnan(mrc.data[i]).any() == False]
-                if len(list_candidate)>0:
+                list_candidate = [i for i in range(mrc.header.nz)]
+                if len(list_candidate) > 0:
                     result_list = list_candidate
         if filename_ext == "mrc":
             with mrcfile.mmap(path, permissive=True, mode="r") as mrc:
-                if np.isnan(mrc.data).any() == False:
-                    result_list = list(range(1))
+                result_list = list(range(1))
     except Exception as e:
         print(e)
         print(
@@ -148,7 +153,7 @@ def get_not_non_indices(path):
     if filename_ext == "hdf":
         try:
             with h5py.File(path, "r") as f:
-                list_candidate = [int(v) for v in list(f["MDF"]["images"]) if np.isnan(f["MDF"]["images"][str(v)]["image"][()]).any() == False]
+                list_candidate = [int(v) for v in list(f["MDF"]["images"])]
         except:
             print(
                 "WARNING in get_list_images: the file '"
@@ -158,15 +163,6 @@ def get_not_non_indices(path):
         if len(list_candidate) > 0:
             result_list = list_candidate
     return result_list
-
-def get_key_list_images(path_to_file):
-    """
-    Returns the list of the keys representing the images in the hdf/mrcs file. It will be converted in list of integer
-    :param path_to_file:
-    :return:
-    """
-    print("Try to list images on", path_to_file)
-    return get_not_non_indices(path_to_file)
 
 
 def getImages_fromList_key(file_index_tubles):
@@ -187,13 +183,12 @@ def getImages_fromList_key(file_index_tubles):
                         if isinstance(list_images, list) or isinstance(
                             list_images, tuple
                         ):
-
                             data = [
-                                f["MDF"]["images"][str(i)]["image"][()]
+                                np.nan_to_num(f["MDF"]["images"][str(i)]["image"][()])
                                 for i in list_images
                             ]  # [()] is used instead of .value
                         elif isinstance(list_images, int):
-                            data = f["MDF"]["images"][str(list_images)]["image"][()]
+                            data = np.nan_to_num(f["MDF"]["images"][str(list_images)]["image"][()])
                         else:
                             print(
                                 "\nERROR in getImages_fromList_key: invalid list_images, it should be a string or a list/tuple of strings:",
@@ -223,11 +218,11 @@ def getImages_fromList_key(file_index_tubles):
                     if isinstance(list_images, list) or isinstance(list_images, tuple):
                         if mrc.header.nz > 1:
                             if len(list_images)==1:
-                                data = mrc.data[list_images[0]]
+                                data = np.nan_to_num(mrc.data[list_images[0]])
                             else:
-                                data = [mrc.data[i] for i in list_images]
+                                data = [np.nan_to_num(mrc.data[i]) for i in list_images]
                         elif len(list_images) == 1:
-                            data = mrc.data
+                            data = np.nan_to_num(mrc.data)
 
         result_data.append(data)
 
