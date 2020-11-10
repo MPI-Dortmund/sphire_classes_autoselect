@@ -141,6 +141,8 @@ def write_results_to_disk(results, output_path):
         In case of classes, write a index_confidence file
         '''
         if filename_ext  == "mrcs" or filename_ext  == "hdf":
+            with open(os.path.join(output_path, filename+"_index_confidence.txt"), "w"):
+                pass
             for k,ingood in enumerate(good_index):
                 write_line(os.path.join(output_path, filename+"_index_confidence.txt"), str(ingood) + " " + "{0:.3f}".format(good_confidence[k]))
             for k, inbad in enumerate(bad_index):
