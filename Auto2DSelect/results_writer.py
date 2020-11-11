@@ -116,7 +116,7 @@ def write_results_to_disk(results, output_path):
         In case of classes, write new classes
         '''
         filename_ext = os.path.basename(path_original).split(".")[-1]
-        filename = ''.join(os.path.basename(path_original).split(".")[:-1])
+        filename = '.'.join(os.path.basename(path_original).split(".")[:-1])
         if filename_ext == "hdf":
             write_hdf(
                 path_original, os.path.join(output_path, filename + "_good.hdf"), good_index
