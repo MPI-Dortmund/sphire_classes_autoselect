@@ -126,21 +126,21 @@ def write_results_to_disk(results, output_path):
                 path_original, os.path.join(output_path, filename + "_bad.hdf"), bad_index
             )
 
-        elif filename_ext == "mrcs":
+        elif filename_ext in {"mrcs", "st"}:
 
             write_mrcs(
                 path_original,
-                os.path.join(output_path, filename + "_good.mrcs"),
+                os.path.join(output_path, filename + "_good." + filename_ext),
                 good_index,
             )
             write_mrcs(
-                path_original, os.path.join(output_path, filename + "_bad.mrcs"), bad_index
+                path_original, os.path.join(output_path, filename + "_bad." + filename_ext), bad_index
             )
 
         '''
         In case of classes, write a index_confidence file
         '''
-        if filename_ext  == "mrcs" or filename_ext  == "hdf":
+        if filename_ext  == "mrcs" or filename_ext  == "hdf" or filename_ext  == "st":
             with open(os.path.join(output_path, filename+"_index_confidence.txt"), "w"):
                 pass
             for k,ingood in enumerate(good_index):
