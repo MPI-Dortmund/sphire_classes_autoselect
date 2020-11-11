@@ -107,7 +107,7 @@ def getList_files(paths):
 
 def getList_relevant_files(path_to_files):
     """
-    Check if the given files are hdf/mrcs with a valid format. Return The list of valid hdf
+    Check if the given files are hdf/mrcs/st with a valid format. Return The list of valid hdf
     :param path_to_files: list of all the files present in the folder (and subfolder)given from the user
     :return: list of valid hdf
     """
@@ -117,6 +117,7 @@ def getList_relevant_files(path_to_files):
         for path_to_file in path_to_files
         if path_to_file.endswith("mrcs")
         or path_to_file.endswith("mrc")
+        or path_to_file.endswith("st")
         or h5py.is_hdf5(path_to_file)
     ]
 
@@ -125,7 +126,7 @@ def getList_relevant_files(path_to_files):
 
 def get_key_list_images(path):
     """
-    Returns the list of the keys representing the images in the hdf/mrcs file. It will be converted in list of integer
+    Returns the list of the keys representing the images in the hdf/mrcs/st file. It will be converted in list of integer
     :param path:
     :return:
     """
@@ -134,7 +135,7 @@ def get_key_list_images(path):
     filename_ext = os.path.basename(path).split(".")[-1]
     result_list = None
     try:
-        if filename_ext == "mrcs":
+        if filename_ext in {"mrcs", "st"}:
             with mrcfile.mmap(path, permissive=True, mode="r") as mrc:
                 list_candidate = [i for i in range(mrc.header.nz)]
                 if len(list_candidate) > 0:
@@ -208,7 +209,7 @@ def getImages_fromList_key(file_index_tubles):
                     print(list_images)
                     print("there are " + str(len(f["MDF"]["images"])))
                     exit()
-            elif path.basename(path_to_file).split(".")[-1] in ["mrc", "mrcs"]:
+            elif path.basename(path_to_file).split(".")[-1] in ["mrc", "mrcs", "st"]:
                 data = []
                 with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
 
@@ -268,7 +269,7 @@ def getImages_fromList_key_old(path_to_file, list_images):
                 print(list_images)
                 print("there are " + str(len(f["MDF"]["images"])))
                 exit()
-        elif path.basename(path_to_file).split(".")[-1] in ["mrc", "mrcs"]:
+        elif path.basename(path_to_file).split(".")[-1] in ["mrc", "mrcs", "st"]:
             data = []
             with mrcfile.mmap(path_to_file, permissive=True, mode="r") as mrc:
 
